@@ -30,6 +30,7 @@ pub trait FCPEncodable {
 
     fn encode(&self) -> String;
 
-    fn decode(encoded: String) -> Self;
+    fn decode(encoded: impl AsyncRead) -> Self;
 
 }
+

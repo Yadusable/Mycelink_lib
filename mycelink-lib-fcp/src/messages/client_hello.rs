@@ -1,3 +1,4 @@
+use tokio::io::AsyncRead;
 use crate::messages::FCPEncodable;
 
 const EXPECTED_VERSION: &str = "2.0";
@@ -21,7 +22,9 @@ impl FCPEncodable for ClientHello {
         builder
     }
 
-    fn decode(encoded: String) -> Self {
+    fn decode(encoded: impl AsyncRead) -> Self {
+        
+
         todo!()
     }
 }

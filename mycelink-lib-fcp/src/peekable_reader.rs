@@ -1,29 +1,61 @@
+use pin_project_lite::pin_project;
 use std::cmp::min;
 use std::collections::VecDeque;
+use std::io::Write;
 use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::task::{ready, Context, Poll};
 use tokio::io::{AsyncRead, AsyncReadExt, ReadBuf};
 
-pub struct PeekableReader<T: AsyncRead> {
-    inner: T,
-    buffer: VecDeque<u8>,
-}
-
-impl <T: AsyncRead> PeekableReader<T> {
-    pub async fn peek_exact(&mut self, buf: &mut [u8]) -> Result<(), tokio::io::Error>{
-        if buf.len() > self.buffer.len() {
-            let mut inner_buf = vec![0; buf.len() - self.buffer.len()];
-
-            self.inner.read_exact(inner_buf.as_mut_slice()).await?
-        }
-
-        todo!()
+pin_project! {
+    pub struct PeekableReader<T: AsyncRead> {
+        #[pin]
+        inner: T,
+        buffer: VecDeque<u8>,
     }
 }
 
-impl <T: AsyncRead> AsyncRead for PeekableReader<T> {
-    fn poll_read(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut ReadBuf<'_>) -> Poll<std::io::Result<()>> {
-        if self.buffer.is_empty() {
+impl<T: AsyncRead + Unpin> PeekableReader<T> {
+    pub fn new(inner: T) -> Self {
+        Self {
+            inner,
+            buffer: VecDeque::new(),
+        }
+    }
+
+    pub async fn peek_exact(&mut self, buf: &mut [u8]) -> Result<(), tokio::io::Error> {
+        if buf.len() > self.buffer.len() {
+            let mut inner_read = vec![0; buf.len() - self.buffer.len()];
+
+            self.inner.read_exact(inner_read.as_mut_slice()).await?;
+
+            self.buffer.write_all(inner_read.as_mut_slice())?;
+        }
+
+        let mut slices = self.buffer.as_slices();
+        if self.buffer.len() > buf.len() {
+            slices.0 = slices.0.split_at(min(slices.0.len(), buf.len())).0;
+            slices.1 = slices
+                .1
+                .split_at(min(slices.1.len(), buf.len() - slices.1.len()))
+                .0;
+        }
+
+        let destinations = buf.split_at_mut(slices.0.len());
+
+        destinations.0.copy_from_slice(slices.0);
+        destinations.1.copy_from_slice(slices.1);
+
+        Ok(())
+    }
+}
+
+impl<T: AsyncRead> AsyncRead for PeekableReader<T> {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        if !self.buffer.is_empty() {
             let n = min(buf.remaining(), self.buffer.len());
 
             let slices = self.buffer.as_slices();
@@ -35,11 +67,84 @@ impl <T: AsyncRead> AsyncRead for PeekableReader<T> {
                 buf.put_slice(slices.1.split_at(n - slices.0.len()).0)
             }
 
-            self.buffer.drain(0..n);
+            let me = self.project();
+            me.buffer.drain(0..n);
 
             Poll::Ready(Ok(()))
         } else {
-            self.inner.poll_read(cx, buf)
+            let me = self.project();
+            Poll::Ready(ready!(me.inner.poll_read(cx, buf)))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::peekable_reader::PeekableReader;
+    use tokio::io::AsyncReadExt;
+    use tokio_test::io::Builder;
+
+    #[tokio::test]
+    async fn test_read_single() {
+        let test_data = [1; 10];
+        let mock = Builder::new().read(&test_data).build();
+
+        let mut reader = PeekableReader::new(mock);
+
+        let mut dest = [0; 10];
+        reader.read_exact(&mut dest).await.unwrap();
+
+        assert_eq!(dest, test_data);
+    }
+
+    #[tokio::test]
+    async fn test_peek_single() {
+        let test_data = [1; 10];
+        let mock = Builder::new().read(&test_data).build();
+
+        let mut reader = PeekableReader::new(mock);
+
+        let mut dest = [0; 10];
+        reader.peek_exact(&mut dest).await.unwrap();
+
+        assert_eq!(dest, test_data);
+    }
+
+    #[tokio::test]
+    async fn test_read_peek_and_read_same() {
+        let test_data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let mock = Builder::new().read(&test_data).build();
+
+        let mut reader = PeekableReader::new(mock);
+
+        let mut first_read_dest = [0; 3];
+        reader.read_exact(&mut first_read_dest).await.unwrap();
+
+        let mut peek_dest = [0; 5];
+        reader.peek_exact(&mut peek_dest).await.unwrap();
+
+        let mut second_read_dest = [0; 7];
+        reader.read_exact(&mut second_read_dest).await.unwrap();
+
+        assert_eq!(first_read_dest, test_data.split_at(3).0);
+        assert_eq!(peek_dest, test_data.split_at(3).1.split_at(5).0);
+        assert_eq!(second_read_dest, test_data.split_at(3).1);
+    }
+
+    #[tokio::test]
+    async fn test_peek_over_multiple() {
+        let test_data = [1; 10];
+        let test_date_splits = test_data.split_at(3);
+        let mock = Builder::new()
+            .read(test_date_splits.0)
+            .read(test_date_splits.1)
+            .build();
+
+        let mut reader = PeekableReader::new(mock);
+
+        let mut dest = [0; 10];
+        reader.peek_exact(&mut dest).await.unwrap();
+
+        assert_eq!(dest, test_data);
     }
 }

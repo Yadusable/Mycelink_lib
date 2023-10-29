@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1.33", features = ["io-util"] }
 pin-project-lite = "0.2"
+async-trait = "0.1.74"
 
 [dev-dependencies]
 tokio-test = "0.4.3"

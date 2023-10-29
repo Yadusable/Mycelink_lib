@@ -1,18 +1,24 @@
-use tokio::io::AsyncRead;
+use crate::decode_error::DecodeError;
 use crate::messages::FCPEncodable;
+use crate::model::MessageIdentifier::MessageIdentifier;
+use crate::peekable_reader::PeekableReader;
+use async_trait::async_trait;
+use tokio::io::{AsyncRead, AsyncReadExt};
 
-const EXPECTED_VERSION: &str = "2.0";
+pub const EXPECTED_VERSION: &str = "2.0";
+const IDENTIFIER: MessageIdentifier = MessageIdentifier::ClientHello;
 
-pub struct ClientHello {
+pub struct ClientHelloMessage {
     name: String,
     expected_version: String,
 }
 
-impl FCPEncodable for ClientHello {
+#[async_trait]
+impl FCPEncodable for ClientHelloMessage {
     fn encode(&self) -> String {
         let mut builder = String::new();
 
-        builder.push_str("ClientHello\n");
+        builder.push_str(IDENTIFIER.name());
         builder.push_str("Name=");
         builder.push_str(self.name.as_str());
         builder.push_str("\nExpectedVersion=");
@@ -22,8 +28,13 @@ impl FCPEncodable for ClientHello {
         builder
     }
 
-    fn decode(encoded: impl AsyncRead) -> Self {
-        
+    async fn decode(
+        encoded: &mut PeekableReader<impl AsyncRead + Unpin + Send>,
+    ) -> Result<Self, DecodeError> {
+        let mut identifier_buffer = [0; IDENTIFIER.len()];
+        encoded.peek_exact(&mut identifier_buffer).await?;
+
+        DecodeError::expect_message_identifier(&identifier_buffer, IDENTIFIER)?;
 
         todo!()
     }

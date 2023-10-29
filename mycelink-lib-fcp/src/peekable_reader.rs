@@ -1,10 +1,11 @@
+use crate::decode_error::DecodeError;
 use pin_project_lite::pin_project;
 use std::cmp::min;
 use std::collections::VecDeque;
 use std::io::Write;
 use std::pin::Pin;
 use std::task::{ready, Context, Poll};
-use tokio::io::{AsyncRead, AsyncReadExt, ReadBuf};
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, BufReader, ReadBuf};
 
 pin_project! {
     pub struct PeekableReader<T: AsyncRead> {
@@ -46,6 +47,64 @@ impl<T: AsyncRead + Unpin> PeekableReader<T> {
         destinations.1.copy_from_slice(slices.1);
 
         Ok(())
+    }
+
+    /// Consumes n bytes from the internal buffer
+    ///
+    /// # Panics
+    /// Will panic if n is larger than the length of the internal buffer.
+    /// You should only call this method if you previously used ['peek_exact'] with a buffer larger than n and there were no reads in between.
+    /// You can also call ['available'] to check the maximum number of bytes that can be safely consumed.
+    pub fn consume(&mut self, n: usize) {
+        self.buffer.drain(0..n);
+    }
+
+    /// Returns the amount of bytes in the internal buffer
+    pub fn available(&self) -> usize {
+        self.buffer.len()
+    }
+
+    /// Finds a specific pattern within the internal buffer.
+    /// Returns the index (inclusive) of the last byte of the first occurrence (after the start_search_at) of the pattern.
+    ///
+    /// An empty pattern always returns Some(0) unless the internal buffer is empty.
+    /// None is returned if the pattern cannot be found.
+    ///
+    /// # Panics
+    /// Panics if start search at is greater than the number of bytes within the internal buffer minus one.
+    fn find_pattern(&self, pattern: &[u8], start_search_at: usize) -> Option<usize> {
+        let mut correct_in_order = 0;
+        for i in start_search_at..self.buffer.len() {
+            if self.buffer[i] == pattern[correct_in_order] {
+                correct_in_order += 1;
+
+                if correct_in_order == pattern.len() {
+                    return Some(i);
+                }
+            }
+        }
+
+        return None;
+    }
+}
+
+impl<T: AsyncRead + Unpin> PeekableReader<BufReader<T>> {
+    pub async fn peek_until(
+        &mut self,
+        buf: &mut Vec<u8>,
+        pattern: &[u8],
+    ) -> Result<(), tokio::io::Error> {
+        if pattern.is_empty() {return Ok(())};
+
+        if let Some(i) = self.find_pattern(pattern, 0) {
+            buf.extend(self.buffer.iter().take(i+1))
+            return Ok(())
+        }
+
+
+        self.inner.read_until(*pattern.last().unwrap(), buf).await;
+
+        todo!()
     }
 }
 

@@ -1,9 +1,9 @@
 use crate::decode_error::DecodeError;
 use crate::messages::FCPEncodable;
-use crate::model::MessageIdentifier::MessageIdentifier;
+use crate::model::message_identifier::MessageIdentifier;
 use crate::peekable_reader::PeekableReader;
 use async_trait::async_trait;
-use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio::io::AsyncRead;
 
 pub const EXPECTED_VERSION: &str = "2.0";
 const IDENTIFIER: MessageIdentifier = MessageIdentifier::ClientHello;

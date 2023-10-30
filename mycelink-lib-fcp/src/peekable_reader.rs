@@ -1,6 +1,5 @@
-use crate::decode_error::DecodeError;
 use pin_project_lite::pin_project;
-use std::cmp::{max, min};
+use std::cmp::min;
 use std::collections::VecDeque;
 use std::io::Write;
 use std::pin::Pin;
@@ -84,7 +83,7 @@ impl<T: AsyncRead + Unpin> PeekableReader<T> {
             }
         }
 
-        return None;
+        None
     }
 }
 

@@ -1,1 +1,1 @@
-pub mod MessageIdentifier;
+pub mod message_identifier;

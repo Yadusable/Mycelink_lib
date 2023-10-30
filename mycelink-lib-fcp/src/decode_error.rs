@@ -7,20 +7,19 @@ pub enum DecodeError {
     ExpectedDifferentMessage { expected: &'static str, got: String },
 }
 
-
 impl DecodeError {
     pub fn expect_message_identifier(got: &[u8], expected: &'static str) -> Result<(), Self> {
         let got = String::from_utf8_lossy(got);
-        
+
         if !got.starts_with(expected) {
-            let got = got.split_once("\n").unwrap_or((&*got, "")).0;
-            
+            let got = got.split_once('\n').unwrap_or((&*got, "")).0;
+
             return Err(Self::ExpectedDifferentMessage {
                 expected,
                 got: String::from(got),
-            })
+            });
         }
-        
+
         Ok(())
     }
 }

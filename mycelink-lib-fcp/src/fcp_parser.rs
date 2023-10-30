@@ -1,5 +1,5 @@
 use crate::decode_error::DecodeError;
-use crate::model::MessageIdentifier::MessageIdentifier;
+use crate::model::message_identifier::MessageIdentifier;
 use crate::peekable_reader::PeekableReader;
 use tokio::io::AsyncRead;
 

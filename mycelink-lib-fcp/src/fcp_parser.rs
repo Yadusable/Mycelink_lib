@@ -16,7 +16,6 @@ impl<'a, T: AsyncRead + Unpin> FCPParser<'a, T> {
         &mut self,
         expected: MessageIdentifier,
     ) -> Result<(), DecodeError> {
-
         let expected = expected.name();
         let mut buf = vec![0; expected.len()];
         self.reader.peek_exact(buf.as_mut_slice()).await?;
@@ -34,6 +33,4 @@ impl<'a, T: AsyncRead + Unpin> FCPParser<'a, T> {
 
         Ok(())
     }
-
-    pub async
 }

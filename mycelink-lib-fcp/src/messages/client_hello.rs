@@ -31,11 +31,6 @@ impl FCPEncodable for ClientHelloMessage {
     async fn decode(
         encoded: &mut PeekableReader<impl AsyncRead + Unpin + Send>,
     ) -> Result<Self, DecodeError> {
-        let mut identifier_buffer = [0; IDENTIFIER.len()];
-        encoded.peek_exact(&mut identifier_buffer).await?;
-
-        DecodeError::expect_message_identifier(&identifier_buffer, IDENTIFIER)?;
-
         todo!()
     }
 }

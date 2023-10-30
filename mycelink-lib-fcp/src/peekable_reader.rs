@@ -1,6 +1,6 @@
 use crate::decode_error::DecodeError;
 use pin_project_lite::pin_project;
-use std::cmp::min;
+use std::cmp::{max, min};
 use std::collections::VecDeque;
 use std::io::Write;
 use std::pin::Pin;
@@ -93,18 +93,25 @@ impl<T: AsyncRead + Unpin> PeekableReader<BufReader<T>> {
         &mut self,
         buf: &mut Vec<u8>,
         pattern: &[u8],
-    ) -> Result<(), tokio::io::Error> {
-        if pattern.is_empty() {return Ok(())};
+    ) -> Result<usize, tokio::io::Error> {
+        if pattern.is_empty() {
+            return Ok(0);
+        };
 
         if let Some(i) = self.find_pattern(pattern, 0) {
-            buf.extend(self.buffer.iter().take(i+1))
-            return Ok(())
+            buf.extend(self.buffer.iter().take(i + 1));
+            return Ok(i + 1);
+        } else {
+            buf.extend(self.buffer.iter());
         }
 
+        let mut total_read = self.buffer.len();
 
-        self.inner.read_until(*pattern.last().unwrap(), buf).await;
+        while buf.split_at(buf.len().saturating_sub(pattern.len())).1 != pattern {
+            total_read += self.inner.read_until(*pattern.last().unwrap(), buf).await?;
+        }
 
-        todo!()
+        Ok(total_read)
     }
 }
 
@@ -127,7 +134,7 @@ impl<T: AsyncRead> AsyncRead for PeekableReader<T> {
             }
 
             let me = self.project();
-            me.buffer.drain(0..n);
+            me.buffer.drain(0..n); // TODO use consume?
 
             Poll::Ready(Ok(()))
         } else {
@@ -140,7 +147,7 @@ impl<T: AsyncRead> AsyncRead for PeekableReader<T> {
 #[cfg(test)]
 mod tests {
     use crate::peekable_reader::PeekableReader;
-    use tokio::io::AsyncReadExt;
+    use tokio::io::{AsyncReadExt, BufReader};
     use tokio_test::io::Builder;
 
     #[tokio::test]
@@ -205,5 +212,109 @@ mod tests {
         reader.peek_exact(&mut dest).await.unwrap();
 
         assert_eq!(dest, test_data);
+    }
+
+    #[tokio::test]
+    async fn test_find_pattern() {
+        // Setup
+        let mock = Builder::new().read(&[1, 2, 3, 4, 5]).build();
+
+        let mut reader = PeekableReader::new(mock);
+
+        // Fill inner buffer
+        let mut read_buf = [0; 5];
+        reader.peek_exact(&mut read_buf).await.unwrap();
+
+        // Actual test
+        assert_eq!(reader.find_pattern(&[1], 0).unwrap(), 0);
+        assert_eq!(reader.find_pattern(&[4], 0).unwrap(), 3);
+        assert_eq!(reader.find_pattern(&[5], 0).unwrap(), 4);
+
+        assert_eq!(reader.find_pattern(&[3], 2).unwrap(), 2);
+        assert_eq!(reader.find_pattern(&[1, 2, 3], 0).unwrap(), 2);
+        assert_eq!(reader.find_pattern(&[4, 5], 3).unwrap(), 4);
+
+        assert_eq!(reader.find_pattern(&[0], 0), None);
+        assert_eq!(reader.find_pattern(&[3], 3), None);
+        assert_eq!(reader.find_pattern(&[3, 2], 0), None);
+    }
+
+    #[tokio::test]
+    async fn test_peek_until_single() {
+        let mock = Builder::new().read(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).build();
+
+        let mut reader = PeekableReader::new(BufReader::new(mock));
+
+        let mut read_buf = Vec::new();
+
+        let read = reader.peek_until(&mut read_buf, &[3]).await.unwrap();
+
+        assert_eq!(read_buf, vec![0, 1, 2, 3]);
+        assert_eq!(read, 4);
+    }
+
+    #[tokio::test]
+    async fn test_peek_until_multiple() {
+        let mock = Builder::new().read(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).build();
+
+        let mut reader = PeekableReader::new(BufReader::new(mock));
+
+        let mut read_buf = Vec::new();
+
+        let read = reader.peek_until(&mut read_buf, &[7, 8]).await.unwrap();
+
+        assert_eq!(read_buf, vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+        assert_eq!(read, 9);
+    }
+
+    #[tokio::test]
+    async fn test_peek_until_multiple_after_peek() {
+        let mock = Builder::new().read(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).build();
+
+        let mut reader = PeekableReader::new(BufReader::new(mock));
+        let mut read_buf = [0; 4];
+        reader.peek_exact(&mut read_buf).await.unwrap();
+
+        let mut read_buf = Vec::new();
+
+        let read = reader.peek_until(&mut read_buf, &[7, 8]).await.unwrap();
+
+        assert_eq!(read_buf, vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+        assert_eq!(read, 9);
+    }
+
+    #[tokio::test]
+    async fn test_peek_until_multiple_after_peek_on_border() {
+        let mock = Builder::new().read(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).build();
+
+        let mut reader = PeekableReader::new(BufReader::new(mock));
+        let mut read_buf = [0; 4];
+        reader.peek_exact(&mut read_buf).await.unwrap();
+
+        let mut read_buf = Vec::new();
+
+        let read = reader
+            .peek_until(&mut read_buf, &[2, 3, 4, 5])
+            .await
+            .unwrap();
+
+        assert_eq!(read_buf, vec![0, 1, 2, 3, 4, 5]);
+        assert_eq!(read, 6);
+    }
+
+    #[tokio::test]
+    async fn test_peek_until_multiple_after_read() {
+        let mock = Builder::new().read(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).build();
+
+        let mut reader = PeekableReader::new(BufReader::new(mock));
+        let mut read_buf = [0; 4];
+        reader.read_exact(&mut read_buf).await.unwrap();
+
+        let mut read_buf = Vec::new();
+
+        let read = reader.peek_until(&mut read_buf, &[6, 7]).await.unwrap();
+
+        assert_eq!(read_buf, vec![4, 5, 6, 7]);
+        assert_eq!(read, 4);
     }
 }

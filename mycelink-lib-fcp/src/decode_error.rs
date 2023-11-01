@@ -1,10 +1,15 @@
 use std::error::Error;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{write, Debug, Display, Formatter};
 
 #[derive(Debug)]
 pub enum DecodeError {
     TokioIoError(tokio::io::Error),
-    ExpectedDifferentMessage { expected: &'static str, got: String },
+    ExpectedDifferentMessage {
+        expected: &'static str,
+        got: Box<str>,
+    },
+    ParseError(Box<str>),
+    InvalidVersion(Box<str>),
 }
 
 impl DecodeError {
@@ -16,7 +21,7 @@ impl DecodeError {
 
             return Err(Self::ExpectedDifferentMessage {
                 expected,
-                got: String::from(got),
+                got: got.into(),
             });
         }
 
@@ -32,6 +37,12 @@ impl Display for DecodeError {
                     f,
                     "Expected '{expected}' but got '{got}' as FCP message type while decoding."
                 )
+            }
+            DecodeError::ParseError(inner) => {
+                write!(f, "{inner}")
+            }
+            DecodeError::InvalidVersion(inner) => {
+                write!(f, "Version {inner} is unknown")
             }
         }
     }

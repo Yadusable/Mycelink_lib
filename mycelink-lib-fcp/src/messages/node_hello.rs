@@ -1,23 +1,23 @@
 use crate::decode_error::DecodeError;
 use crate::fcp_parser::FCPParser;
-use crate::messages::FCPEncodable;
+use crate::messages::FCPDecodable;
+use crate::model::connection_identifier::ConnectionIdentifier;
 use crate::model::fcp_version::FCPVersion;
 use crate::model::message_identifier::MessageIdentifier;
 use async_trait::async_trait;
-use tokio::io::{AsyncRead, BufReader};
+use tokio::io::AsyncRead;
 
-pub struct NodeHello {
-    version: FCPVersion,
+#[derive(Debug, Eq, PartialEq)]
+pub struct NodeHelloMessage {
+    pub fcp_version: FCPVersion,
+    pub node: Box<str>,
+    pub connection_identifier: ConnectionIdentifier,
 }
 
 #[async_trait]
-impl FCPEncodable for NodeHello {
-    fn encode(&self) -> String {
-        todo!()
-    }
-
+impl FCPDecodable for NodeHelloMessage {
     async fn decode(
-        encoded: &mut FCPParser<BufReader<impl AsyncRead + Unpin + Send>>,
+        encoded: &mut FCPParser<impl AsyncRead + Unpin + Send>,
     ) -> Result<Self, DecodeError>
     where
         Self: Sized,
@@ -28,6 +28,10 @@ impl FCPEncodable for NodeHello {
 
         let fields = encoded.parse_fields().await?;
 
-        todo!()
+        Ok(NodeHelloMessage {
+            fcp_version: fields.get("FCPVersion")?.value().try_into()?,
+            node: fields.get("Node")?.value().into(),
+            connection_identifier: fields.get("ConnectionIdentifier")?.value().into(),
+        })
     }
 }

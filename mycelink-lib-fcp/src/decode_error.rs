@@ -1,33 +1,23 @@
+use crate::model::message_identifier::MessageIdentifier;
 use std::error::Error;
-use std::fmt::{write, Debug, Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
 pub enum DecodeError {
     TokioIoError(tokio::io::Error),
+    ProtocolBreak(Box<str>),
     ExpectedDifferentMessage {
-        expected: &'static str,
+        expected: MessageIdentifier,
+        got: MessageIdentifier,
+    },
+    UnknownMessageIdentifier {
         got: Box<str>,
     },
     ParseError(Box<str>),
     InvalidVersion(Box<str>),
+    MissingField(Box<str>),
 }
 
-impl DecodeError {
-    pub fn expect_message_identifier(got: &[u8], expected: &'static str) -> Result<(), Self> {
-        let got = String::from_utf8_lossy(got);
-
-        if !got.starts_with(expected) {
-            let got = got.split_once('\n').unwrap_or((&*got, "")).0;
-
-            return Err(Self::ExpectedDifferentMessage {
-                expected,
-                got: got.into(),
-            });
-        }
-
-        Ok(())
-    }
-}
 impl Display for DecodeError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -38,11 +28,20 @@ impl Display for DecodeError {
                     "Expected '{expected}' but got '{got}' as FCP message type while decoding."
                 )
             }
+            DecodeError::UnknownMessageIdentifier { got } => {
+                write!(f, "Could not parse '{got}' as MessageIdentifier")
+            }
             DecodeError::ParseError(inner) => {
-                write!(f, "{inner}")
+                write!(f, "Parse error: {inner}")
             }
             DecodeError::InvalidVersion(inner) => {
-                write!(f, "Version {inner} is unknown")
+                write!(f, "Version {inner} is unknown.")
+            }
+            DecodeError::MissingField(inner) => {
+                write!(f, "Field {inner} is missing in message.")
+            }
+            DecodeError::ProtocolBreak(inner) => {
+                write!(f, "Protocol Break: {inner}")
             }
         }
     }

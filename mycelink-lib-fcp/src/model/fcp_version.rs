@@ -1,6 +1,6 @@
 use crate::decode_error::DecodeError;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum FCPVersion {
     V2_0,
 }
@@ -19,7 +19,9 @@ impl TryFrom<&str> for FCPVersion {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "2.0" => Ok(FCPVersion::V2_0),
-            _default => Err(DecodeError::ParseError(value.into())),
+            _default => Err(DecodeError::ParseError(
+                format!("Failed parsing {value} as a valid FCP version").into(),
+            )),
         }
     }
 }

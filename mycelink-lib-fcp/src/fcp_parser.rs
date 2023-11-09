@@ -1,7 +1,8 @@
 use crate::decode_error::DecodeError;
-use crate::model::message_identifier::MessageIdentifier;
+use crate::decode_error::DecodeError::{ExpectedDifferentMessage, UnknownMessageIdentifier};
+use crate::model::fields::{Field, Fields};
+use crate::model::message_identifier::{MessageIdentifier, MESSAGE_IDENTIFIERS};
 use crate::peekable_reader::PeekableReader;
-use std::fmt::format;
 use tokio::io::{AsyncRead, BufReader};
 
 const END_MESSAGE_LIT: &str = "EndMessage\n";
@@ -20,36 +21,45 @@ impl<'a, T: AsyncRead + Unpin> FCPParser<'a, T> {
         &mut self,
         expected: MessageIdentifier,
     ) -> Result<(), DecodeError> {
-        let expected = expected.name();
-        let mut buf = vec![0; expected.len()];
-        self.reader.peek_exact(buf.as_mut_slice()).await?;
+        let read = self.peek_identifier().await?;
 
-        let got = String::from_utf8_lossy(buf.as_slice());
-
-        if !got.starts_with(expected) {
-            return Err(DecodeError::ExpectedDifferentMessage {
+        if read == expected {
+            self.reader.consume(read.name().len());
+            Ok(())
+        } else {
+            Err(ExpectedDifferentMessage {
                 expected,
-                got: got.into(),
-            });
+                got: read,
+            })
         }
-
-        self.reader.consume(buf.len());
-
-        Ok(())
     }
 
-    pub async fn parse_fields(&mut self) -> Result<Vec<(Box<str>, Box<str>)>, DecodeError> {
+    pub async fn peek_identifier(&mut self) -> Result<MessageIdentifier, DecodeError> {
+        let mut buf = Vec::new();
+        self.reader.peek_until(&mut buf, &[b'\n']).await?;
+
+        match MESSAGE_IDENTIFIERS
+            .iter()
+            .find(|e| e.name().as_bytes() == buf.as_slice())
+        {
+            None => Err(UnknownMessageIdentifier {
+                got: String::from_utf8_lossy(buf.as_slice()).into(),
+            }),
+            Some(found) => Ok(*found),
+        }
+    }
+
+    pub async fn parse_fields(&mut self) -> Result<Fields, DecodeError> {
         let mut peek_buf = Vec::new();
         let mut results = Vec::new();
         while {
             peek_buf.clear();
-            self.reader
-                .peek_until(&mut peek_buf, "\n".as_bytes())
-                .await?;
+            self.reader.peek_until(&mut peek_buf, b"\n").await?;
             peek_buf.as_slice() != "EndMessage\n".as_bytes()
                 && peek_buf.as_slice() != "Data\n".as_bytes()
         } {
             let line = String::from_utf8_lossy(peek_buf.as_slice());
+            let line = line.split_at(line.len().saturating_sub(1)).0;
 
             match line.split_once('=') {
                 None => {
@@ -58,14 +68,14 @@ impl<'a, T: AsyncRead + Unpin> FCPParser<'a, T> {
                         .expect("Failed to recover from invalid Fields while parsing message.");
                     return Err(DecodeError::ParseError(format!("Expected separator '=' in '{line}' while parsing fields. Discarding message.").into()));
                 }
-                Some((key, value)) => results.push((key.into(), value.into())),
+                Some((key, value)) => results.push(Field::new(key.into(), value.into())),
             };
 
             self.reader.consume(peek_buf.len());
         }
 
         self.reader.consume(peek_buf.len());
-        Ok(results)
+        Ok(results.into())
     }
 
     async fn discard_message(&mut self) -> Result<(), DecodeError> {

@@ -1,17 +1,14 @@
-use crate::decode_error::DecodeError;
-use crate::fcp_parser::FCPParser;
 use crate::messages::FCPEncodable;
 use crate::model::fcp_version::FCPVersion;
 use crate::model::message_identifier::MessageIdentifier;
 use async_trait::async_trait;
-use tokio::io::{AsyncRead, BufReader};
 
-pub const EXPECTED_VERSION: &str = "2.0";
+pub const EXPECTED_VERSION: FCPVersion = FCPVersion::V2_0;
 const IDENTIFIER: MessageIdentifier = MessageIdentifier::ClientHello;
 
 pub struct ClientHelloMessage {
-    name: String,
-    version: FCPVersion,
+    pub name: String,
+    pub version: FCPVersion,
 }
 
 #[async_trait]
@@ -28,10 +25,27 @@ impl FCPEncodable for ClientHelloMessage {
 
         builder
     }
+}
 
-    async fn decode(
-        encoded: &mut FCPParser<BufReader<impl AsyncRead + Unpin>>,
-    ) -> Result<Self, DecodeError> {
-        todo!()
+#[cfg(test)]
+mod tests {
+    use crate::messages::client_hello::{ClientHelloMessage, EXPECTED_VERSION};
+    use crate::messages::ClientMessage::ClientHello;
+
+    #[test]
+    fn test_encode() {
+        let client_hello = ClientHello(ClientHelloMessage {
+            version: EXPECTED_VERSION,
+            name: "Encode-Test".into(),
+        });
+
+        let encoded = client_hello.encode();
+
+        let str = String::from_utf8(encoded).unwrap();
+
+        assert_eq!(
+            str.as_str(),
+            "ClientHello\nName=Encode-Test\nExpectedVersion=2.0\nEndMessage\n"
+        )
     }
 }

@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 use std::io::Write;
 use std::pin::Pin;
 use std::task::{ready, Context, Poll};
-use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncReadExt, BufReader, ReadBuf};
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, BufReader, ReadBuf};
 
 pin_project! {
     pub struct PeekableReader<T: AsyncRead> {
@@ -104,15 +104,18 @@ impl<T: AsyncRead + Unpin> PeekableReader<BufReader<T>> {
             buf.extend(self.buffer.iter());
         }
 
+        let initial_size = buf.len();
         let mut total_read = self.buffer.len();
 
         while buf.split_at(buf.len().saturating_sub(pattern.len())).1 != pattern {
             total_read += self.inner.read_until(*pattern.last().unwrap(), buf).await?;
         }
 
+        self.buffer.extend(buf.split_at(initial_size).1.iter());
+
         Ok(total_read)
     }
-    
+
     pub async fn read_until(
         &mut self,
         buf: &mut Vec<u8>,

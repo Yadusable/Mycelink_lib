@@ -3,7 +3,7 @@ use crate::fcp_parser::FCPParser;
 use crate::messages::FCPDecodable;
 use crate::model::connection_identifier::ConnectionIdentifier;
 use crate::model::fcp_version::FCPVersion;
-use crate::model::message_identifier::MessageIdentifier;
+use crate::model::message_identifier::NodeMessageIdentifier;
 use async_trait::async_trait;
 use tokio::io::AsyncRead;
 
@@ -23,7 +23,7 @@ impl FCPDecodable for NodeHelloMessage {
         Self: Sized,
     {
         encoded
-            .expect_identifier(MessageIdentifier::NodeHello)
+            .expect_node_identifier(NodeMessageIdentifier::NodeHello)
             .await?;
 
         let fields = encoded.parse_fields().await?;

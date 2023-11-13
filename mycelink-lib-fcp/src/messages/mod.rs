@@ -1,12 +1,12 @@
+pub mod client_get;
 pub mod client_hello;
 pub mod node_hello;
 
 use crate::decode_error::DecodeError;
-use crate::decode_error::DecodeError::ProtocolBreak;
 use crate::fcp_parser::FCPParser;
 use crate::messages::client_hello::ClientHelloMessage;
 use crate::messages::node_hello::NodeHelloMessage;
-use crate::model::message_identifier::MessageIdentifier;
+use crate::model::message_identifier::NodeMessageIdentifier;
 use crate::peekable_reader::PeekableReader;
 use async_trait::async_trait;
 use tokio::io::AsyncRead;
@@ -31,11 +31,8 @@ impl NodeMessage {
     pub async fn decode_reader(
         reader: &mut FCPParser<'_, impl AsyncRead + Unpin + Send>,
     ) -> Result<NodeMessage, DecodeError> {
-        match reader.peek_identifier().await? {
-            MessageIdentifier::ClientHello => Err(ProtocolBreak(
-                "FCP Node may not send client messages".into(),
-            )),
-            MessageIdentifier::NodeHello => Ok(NodeMessage::NodeHello(
+        match reader.peek_node_identifier().await? {
+            NodeMessageIdentifier::NodeHello => Ok(NodeMessage::NodeHello(
                 NodeHelloMessage::decode(reader).await?,
             )),
         }

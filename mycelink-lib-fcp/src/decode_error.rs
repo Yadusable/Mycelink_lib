@@ -1,4 +1,4 @@
-use crate::model::message_identifier::MessageIdentifier;
+use crate::model::message_identifier::{MessageIdentifier, NodeMessageIdentifier};
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -7,8 +7,8 @@ pub enum DecodeError {
     TokioIoError(tokio::io::Error),
     ProtocolBreak(Box<str>),
     ExpectedDifferentMessage {
-        expected: MessageIdentifier,
-        got: MessageIdentifier,
+        expected: NodeMessageIdentifier,
+        got: NodeMessageIdentifier,
     },
     UnknownMessageIdentifier {
         got: Box<str>,
@@ -25,7 +25,9 @@ impl Display for DecodeError {
             DecodeError::ExpectedDifferentMessage { expected, got } => {
                 write!(
                     f,
-                    "Expected '{expected}' but got '{got}' as FCP message type while decoding."
+                    "Expected '{}' but got '{}' as FCP message type while decoding.",
+                    expected.name(),
+                    got.name()
                 )
             }
             DecodeError::UnknownMessageIdentifier { got } => {

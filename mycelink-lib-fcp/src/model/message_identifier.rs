@@ -1,26 +1,39 @@
-use crate::model::message_identifier::MessageIdentifier::{ClientHello, NodeHello};
-use std::fmt::{Display, Formatter};
+use crate::model::message_identifier::ClientMessageIdentifier::{ClientGet, ClientHello};
+use crate::model::message_identifier::NodeMessageIdentifier::NodeHello;
 
-pub const MESSAGE_IDENTIFIERS: &[MessageIdentifier] = &[ClientHello, NodeHello];
+pub const CLIENT_MESSAGE_IDENTIFIERS: &[ClientMessageIdentifier] = &[ClientHello, ClientGet];
+pub const NODE_MESSAGE_IDENTIFIERS: &[NodeMessageIdentifier] = &[NodeHello];
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum MessageIdentifier {
+pub enum ClientMessageIdentifier {
     ClientHello,
+    ClientGet,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum NodeMessageIdentifier {
     NodeHello,
 }
 
-impl MessageIdentifier {
+pub trait MessageIdentifier {
+    fn name(&self) -> &'static str;
+}
+
+impl MessageIdentifier for NodeMessageIdentifier {
     /// Gets the str representing the MessageIdentifier (e.g. "ClientHello")
-    pub fn name(&self) -> &'static str {
+    fn name(&self) -> &'static str {
         match self {
-            ClientHello => "ClientHello\n",
             NodeHello => "NodeHello\n",
         }
     }
 }
 
-impl Display for MessageIdentifier {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name())
+impl MessageIdentifier for ClientMessageIdentifier {
+    /// Gets the str representing the MessageIdentifier (e.g. "ClientHello")
+    fn name(&self) -> &'static str {
+        match self {
+            ClientHello => "ClientHello\n",
+            ClientGet => "ClientGet\n",
+        }
     }
 }

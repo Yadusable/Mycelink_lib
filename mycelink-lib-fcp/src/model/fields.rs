@@ -1,13 +1,11 @@
 use crate::decode_error::DecodeError;
 use crate::decode_error::DecodeError::{ParseError, UnexpectedEOF};
-use crate::peekable_reader::{PeekableReader, Peeker};
-use crate::peekable_reader_legacy::PeekableReaderLegacy;
+use crate::peekable_reader::Peeker;
 use std::slice::Iter;
-use std::str::from_utf8;
-use tokio::io::{AsyncRead, BufReader};
+use tokio::io::AsyncRead;
 
-const END_MESSAGE_LIT: &str = "EndMessage\n";
-const DATA_LIT: &str = "Data\n";
+pub const END_MESSAGE_LIT: &str = "EndMessage\n";
+pub const DATA_LIT: &str = "Data\n";
 
 pub struct Fields {
     fields: Vec<Field>,
@@ -26,9 +24,8 @@ impl Fields {
     }
 
     pub async fn decode(
-        encoded: &mut PeekableReader<impl AsyncRead + Unpin>,
+        peeker: &mut Peeker<'_, impl AsyncRead + Unpin>,
     ) -> Result<Self, DecodeError> {
-        let mut peeker = Peeker::new(encoded);
         let mut fields: Vec<Field> = Vec::new();
 
         let mut line = peeker.next_contentful_line().await?.ok_or(UnexpectedEOF)?;
@@ -45,8 +42,6 @@ impl Fields {
             ));
         }
 
-        let stats = peeker.into();
-        encoded.advance_to_peeker_stats(stats);
         Ok(fields.into())
     }
 }

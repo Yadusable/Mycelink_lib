@@ -24,8 +24,8 @@ pub enum NodeMessageType {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum MessageType {
-    ClientMessageIdentifier(ClientMessageType),
-    NodeMessageIdentifier(NodeMessageType),
+    Client(ClientMessageType),
+    Node(NodeMessageType),
 }
 
 impl NodeMessageType {
@@ -50,8 +50,8 @@ impl ClientMessageType {
 impl MessageType {
     pub fn name(&self) -> &'static str {
         match self {
-            MessageType::ClientMessageIdentifier(inner) => inner.name(),
-            MessageType::NodeMessageIdentifier(inner) => inner.name(),
+            MessageType::Client(inner) => inner.name(),
+            MessageType::Node(inner) => inner.name(),
         }
     }
 }
@@ -85,25 +85,21 @@ impl TryFrom<&str> for MessageType {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         NodeMessageType::try_from(value)
-            .map(MessageType::NodeMessageIdentifier)
-            .or(ClientMessageType::try_from(value).map(MessageType::ClientMessageIdentifier))
+            .map(MessageType::Node)
+            .or(ClientMessageType::try_from(value).map(MessageType::Client))
     }
 }
 
 impl MessageType {
     pub async fn decode(
-        encoded: &mut PeekableReader<impl AsyncRead + Unpin>,
+        peeker: &mut Peeker<'_, impl AsyncRead + Unpin>,
     ) -> Result<Self, DecodeError>
     where
         Self: Sized,
     {
-        let mut peeker = Peeker::new(encoded);
         let peeked_identifier = peeker.next_contentful_line().await?.ok_or(UnexpectedEOF)?;
 
         let res = MessageType::try_from(peeked_identifier.deref())?;
-
-        let stats = peeker.into();
-        encoded.advance_to_peeker_stats(stats);
 
         Ok(res)
     }

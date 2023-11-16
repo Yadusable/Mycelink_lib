@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::ops::Sub;
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader, Lines};
 
@@ -62,20 +63,20 @@ impl<T: AsyncRead + Unpin> PeekableReader<T> {
 
 pub struct Peeker<'a, T: AsyncRead> {
     reader: &'a mut PeekableReader<T>,
-    current_line: usize,
+    next_line: usize,
 }
 
 impl<'a, T: AsyncRead + Unpin> Peeker<'a, T> {
     pub fn new(reader: &'a mut PeekableReader<T>) -> Self {
         Self {
             reader,
-            current_line: 0,
+            next_line: 0,
         }
     }
 
     pub async fn next_line(&mut self) -> Result<Option<Arc<str>>, tokio::io::Error> {
-        self.current_line += 1;
-        self.reader.get_peeked_line(self.current_line - 1).await
+        self.next_line += 1;
+        self.reader.get_peeked_line(self.next_line - 1).await
     }
 
     pub async fn next_contentful_line(&mut self) -> Result<Option<Arc<str>>, tokio::io::Error> {
@@ -89,9 +90,17 @@ impl<'a, T: AsyncRead + Unpin> Peeker<'a, T> {
 
     pub async fn has_next_line(&mut self) -> Result<bool, tokio::io::Error> {
         self.reader
-            .get_peeked_line(self.current_line)
+            .get_peeked_line(self.next_line)
             .await
             .map(|e| e.is_some())
+    }
+
+    pub async fn current_line(&mut self) -> Result<Option<Arc<str>>, tokio::io::Error> {
+        if self.next_line == 0 {
+            panic!("Peeker hasn't been used yet and therefore has no current line")
+        }
+        
+        self.reader.get_peeked_line(self.next_line-1).await
     }
 }
 
@@ -102,7 +111,17 @@ pub struct PeekerStats {
 impl<'a, T: AsyncRead> From<Peeker<'a, T>> for PeekerStats {
     fn from(value: Peeker<T>) -> Self {
         Self {
-            current_line: value.current_line,
+            current_line: value.next_line,
+        }
+    }
+}
+
+impl Sub<usize> for PeekerStats {
+    type Output = PeekerStats;
+
+    fn sub(self, rhs: usize) -> Self::Output {
+        Self {
+            current_line: self.current_line - rhs,
         }
     }
 }

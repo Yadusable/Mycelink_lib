@@ -6,15 +6,7 @@ use std::pin::Pin;
 use std::task::{ready, Context, Poll};
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, BufReader, ReadBuf};
 
-pin_project! {
-    pub struct PeekableReader<T: AsyncRead> {
-        #[pin]
-        inner: T,
-        buffer: VecDeque<u8>,
-    }
-}
-
-impl<T: AsyncRead + Unpin> PeekableReader<T> {
+impl<T: AsyncRead + Unpin> PeekableReaderLegacy<T> {
     pub fn new(inner: T) -> Self {
         Self {
             inner,
@@ -87,7 +79,16 @@ impl<T: AsyncRead + Unpin> PeekableReader<T> {
     }
 }
 
-impl<T: AsyncRead + Unpin> PeekableReader<BufReader<T>> {
+pin_project! {
+    #[deprecated]
+    pub struct PeekableReaderLegacy<T: AsyncRead> {
+        #[pin]
+        inner: T,
+        buffer: VecDeque<u8>,
+    }
+}
+
+impl<T: AsyncRead + Unpin> PeekableReaderLegacy<BufReader<T>> {
     pub async fn peek_until(
         &mut self,
         buf: &mut Vec<u8>,
@@ -146,7 +147,7 @@ impl<T: AsyncRead + Unpin> PeekableReader<BufReader<T>> {
     }
 }
 
-impl<T: AsyncRead> AsyncRead for PeekableReader<T> {
+impl<T: AsyncRead> AsyncRead for PeekableReaderLegacy<T> {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -177,7 +178,7 @@ impl<T: AsyncRead> AsyncRead for PeekableReader<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::peekable_reader::PeekableReader;
+    use crate::peekable_reader_legacy::PeekableReaderLegacy;
     use std::str::from_utf8;
     use tokio::io::{AsyncReadExt, BufReader};
     use tokio_test::io::Builder;
@@ -187,7 +188,7 @@ mod tests {
         let test_data = [1; 10];
         let mock = Builder::new().read(&test_data).build();
 
-        let mut reader = PeekableReader::new(mock);
+        let mut reader = PeekableReaderLegacy::new(mock);
 
         let mut dest = [0; 10];
         reader.read_exact(&mut dest).await.unwrap();
@@ -200,7 +201,7 @@ mod tests {
         let test_data = [1; 10];
         let mock = Builder::new().read(&test_data).build();
 
-        let mut reader = PeekableReader::new(mock);
+        let mut reader = PeekableReaderLegacy::new(mock);
 
         let mut dest = [0; 10];
         reader.peek_exact(&mut dest).await.unwrap();
@@ -213,7 +214,7 @@ mod tests {
         let test_data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let mock = Builder::new().read(&test_data).build();
 
-        let mut reader = PeekableReader::new(mock);
+        let mut reader = PeekableReaderLegacy::new(mock);
 
         let mut first_read_dest = [0; 3];
         reader.read_exact(&mut first_read_dest).await.unwrap();
@@ -238,7 +239,7 @@ mod tests {
             .read(test_date_splits.1)
             .build();
 
-        let mut reader = PeekableReader::new(mock);
+        let mut reader = PeekableReaderLegacy::new(mock);
 
         let mut dest = [0; 10];
         reader.peek_exact(&mut dest).await.unwrap();
@@ -251,7 +252,7 @@ mod tests {
         // Setup
         let mock = Builder::new().read(&[1, 2, 3, 4, 5]).build();
 
-        let mut reader = PeekableReader::new(mock);
+        let mut reader = PeekableReaderLegacy::new(mock);
 
         // Fill inner buffer
         let mut read_buf = [0; 5];
@@ -275,7 +276,7 @@ mod tests {
     async fn test_peek_until_single() {
         let mock = Builder::new().read(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).build();
 
-        let mut reader = PeekableReader::new(BufReader::new(mock));
+        let mut reader = PeekableReaderLegacy::new(BufReader::new(mock));
 
         let mut read_buf = Vec::new();
 
@@ -289,7 +290,7 @@ mod tests {
     async fn test_peek_until_multiple() {
         let mock = Builder::new().read(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).build();
 
-        let mut reader = PeekableReader::new(BufReader::new(mock));
+        let mut reader = PeekableReaderLegacy::new(BufReader::new(mock));
 
         let mut read_buf = Vec::new();
 
@@ -303,7 +304,7 @@ mod tests {
     async fn test_peek_until_multiple_after_peek() {
         let mock = Builder::new().read(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).build();
 
-        let mut reader = PeekableReader::new(BufReader::new(mock));
+        let mut reader = PeekableReaderLegacy::new(BufReader::new(mock));
         let mut read_buf = [0; 4];
         reader.peek_exact(&mut read_buf).await.unwrap();
 
@@ -319,7 +320,7 @@ mod tests {
     async fn test_peek_until_multiple_after_peek_on_border() {
         let mock = Builder::new().read(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).build();
 
-        let mut reader = PeekableReader::new(BufReader::new(mock));
+        let mut reader = PeekableReaderLegacy::new(BufReader::new(mock));
         let mut read_buf = [0; 4];
         reader.peek_exact(&mut read_buf).await.unwrap();
 
@@ -338,7 +339,7 @@ mod tests {
     async fn test_peek_until_multiple_after_read() {
         let mock = Builder::new().read(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).build();
 
-        let mut reader = PeekableReader::new(BufReader::new(mock));
+        let mut reader = PeekableReaderLegacy::new(BufReader::new(mock));
         let mut read_buf = [0; 4];
         reader.read_exact(&mut read_buf).await.unwrap();
 
@@ -354,7 +355,7 @@ mod tests {
     async fn test_peek_line() {
         let mock = Builder::new().read(b"Hello\nWorld\n").build();
 
-        let mut reader = PeekableReader::new(BufReader::new(mock));
+        let mut reader = PeekableReaderLegacy::new(BufReader::new(mock));
         let mut read_buf = Vec::new();
 
         let read = reader.peek_line(&mut read_buf).await.unwrap();
@@ -371,7 +372,7 @@ mod tests {
     async fn test_consume_line() {
         let mock = Builder::new().read(b"Hello\nWorld\n").build();
 
-        let mut reader = PeekableReader::new(BufReader::new(mock));
+        let mut reader = PeekableReaderLegacy::new(BufReader::new(mock));
         let mut read_buf = Vec::new();
 
         reader.peek_line(&mut read_buf).await.unwrap();

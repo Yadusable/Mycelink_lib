@@ -2,18 +2,19 @@ use crate::decode_error::DecodeError;
 use crate::decode_error::DecodeError::{ExpectedDifferentMessageType, UnknownMessageType};
 use crate::model::fields::{Field, Fields};
 use crate::model::message_type_identifier::{NodeMessageType, NODE_MESSAGE_TYPES};
-use crate::peekable_reader::PeekableReader;
+use crate::peekable_reader_legacy::PeekableReaderLegacy;
 use tokio::io::{AsyncRead, BufReader};
 
 const END_MESSAGE_LIT: &str = "EndMessage\n";
 const DATA_LIT: &str = "Data\n";
 
-pub struct FCPParser<'a, T: AsyncRead + Unpin> {
-    reader: &'a mut PeekableReader<BufReader<T>>,
+#[deprecated]
+pub struct FCPParserLegacy<'a, T: AsyncRead + Unpin> {
+    reader: &'a mut PeekableReaderLegacy<BufReader<T>>,
 }
 
-impl<'a, T: AsyncRead + Unpin> FCPParser<'a, T> {
-    pub fn new(reader: &'a mut PeekableReader<BufReader<T>>) -> Self {
+impl<'a, T: AsyncRead + Unpin> FCPParserLegacy<'a, T> {
+    pub fn new(reader: &'a mut PeekableReaderLegacy<BufReader<T>>) -> Self {
         Self { reader }
     }
 

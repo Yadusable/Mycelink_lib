@@ -1,5 +1,5 @@
 use crate::decode_error::DecodeError;
-use crate::fcp_parser::FCPParser;
+use crate::fcp_parser_legacy::FCPParserLegacy;
 use crate::messages::FCPDecodable;
 use crate::model::connection_identifier::ConnectionIdentifier;
 use crate::model::fcp_version::FCPVersion;
@@ -17,7 +17,7 @@ pub struct NodeHelloMessage {
 #[async_trait]
 impl FCPDecodable for NodeHelloMessage {
     async fn decode(
-        encoded: &mut FCPParser<impl AsyncRead + Unpin + Send>,
+        encoded: &mut FCPParserLegacy<impl AsyncRead + Unpin + Send>,
     ) -> Result<Self, DecodeError>
     where
         Self: Sized,

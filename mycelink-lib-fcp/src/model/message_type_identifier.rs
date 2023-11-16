@@ -1,7 +1,7 @@
 use crate::decode_error::DecodeError;
 use crate::model::message_type_identifier::ClientMessageType::{ClientGet, ClientHello};
 use crate::model::message_type_identifier::NodeMessageType::NodeHello;
-use crate::peekable_reader::PeekableReader;
+use crate::peekable_reader_legacy::PeekableReaderLegacy;
 use std::str::from_utf8;
 use tokio::io::{AsyncRead, BufReader};
 
@@ -89,7 +89,7 @@ impl TryFrom<&str> for MessageType {
 
 impl MessageType {
     pub async fn decode(
-        encoded: &mut PeekableReader<BufReader<impl AsyncRead + Unpin + Send>>,
+        encoded: &mut PeekableReaderLegacy<BufReader<impl AsyncRead + Unpin + Send>>,
     ) -> Result<Self, DecodeError>
     where
         Self: Sized,

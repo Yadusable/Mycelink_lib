@@ -2,7 +2,7 @@ use crate::decode_error::DecodeError;
 use crate::messages::{FCPEncodable, MessagePayload};
 use crate::model::fields::Fields;
 use crate::model::message_type_identifier::MessageType;
-use crate::peekable_reader::PeekableReader;
+use crate::peekable_reader_legacy::PeekableReaderLegacy;
 use tokio::io::{AsyncRead, BufReader};
 
 pub struct Message {
@@ -38,7 +38,7 @@ impl FCPEncodable for Message {
 
 impl Message {
     async fn decode(
-        encoded: &mut PeekableReader<BufReader<impl AsyncRead + Unpin + Send>>,
+        encoded: &mut PeekableReaderLegacy<BufReader<impl AsyncRead + Unpin + Send>>,
     ) -> Result<Self, DecodeError> {
         let message_type = MessageType::decode(encoded).await?;
         let fields = Fields::decode(encoded).await?;

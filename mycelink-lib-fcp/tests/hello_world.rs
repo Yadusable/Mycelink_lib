@@ -1,10 +1,10 @@
-use mycelink_lib_fcp::fcp_parser::FCPParser;
+use mycelink_lib_fcp::fcp_parser_legacy::FCPParserLegacy;
 use mycelink_lib_fcp::messages::client_hello::{ClientHelloMessage, EXPECTED_VERSION};
 use mycelink_lib_fcp::messages::node_hello::NodeHelloMessage;
 use mycelink_lib_fcp::messages::ClientMessage::ClientHello;
 use mycelink_lib_fcp::messages::FCPDecodable;
 use mycelink_lib_fcp::model::fcp_version::FCPVersion;
-use mycelink_lib_fcp::peekable_reader::PeekableReader;
+use mycelink_lib_fcp::peekable_reader_legacy::PeekableReaderLegacy;
 use tokio::io::{AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 
@@ -23,8 +23,8 @@ async fn test_client_hello() {
 
     let (rx, _tx) = stream.split();
 
-    let mut peekable = PeekableReader::new(BufReader::new(rx));
-    let mut parser = FCPParser::new(&mut peekable);
+    let mut peekable = PeekableReaderLegacy::new(BufReader::new(rx));
+    let mut parser = FCPParserLegacy::new(&mut peekable);
     let node_hello = NodeHelloMessage::decode(&mut parser).await.unwrap();
 
     assert_eq!(

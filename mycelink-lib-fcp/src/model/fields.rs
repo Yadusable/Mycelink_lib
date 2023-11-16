@@ -1,6 +1,6 @@
 use crate::decode_error::DecodeError;
 use crate::decode_error::DecodeError::ParseError;
-use crate::peekable_reader::PeekableReader;
+use crate::peekable_reader_legacy::PeekableReaderLegacy;
 use std::slice::Iter;
 use std::str::from_utf8;
 use tokio::io::{AsyncRead, BufReader};
@@ -25,7 +25,7 @@ impl Fields {
     }
 
     pub async fn decode(
-        encoded: &mut PeekableReader<BufReader<impl AsyncRead + Unpin + Send>>,
+        encoded: &mut PeekableReaderLegacy<BufReader<impl AsyncRead + Unpin + Send>>,
     ) -> Result<Self, DecodeError> {
         let mut buf = Vec::new();
         let mut fields: Vec<Field> = Vec::new();

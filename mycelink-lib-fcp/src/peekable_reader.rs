@@ -116,6 +116,10 @@ impl<T: AsyncRead + Unpin> PeekableReader<BufReader<T>> {
         Ok(total_read)
     }
 
+    pub async fn peek_line(&mut self, buf: &mut Vec<u8>) -> Result<usize, tokio::io::Error> {
+        self.peek_until(buf, b"\n").await
+    }
+
     pub async fn read_until(
         &mut self,
         buf: &mut Vec<u8>,
@@ -124,6 +128,21 @@ impl<T: AsyncRead + Unpin> PeekableReader<BufReader<T>> {
         let res = self.peek_until(buf, pattern).await?;
         self.consume(res);
         Ok(res)
+    }
+
+    pub async fn read_line(&mut self, buf: &mut Vec<u8>) -> Result<usize, tokio::io::Error> {
+        self.read_until(buf, b"\n").await
+    }
+
+    pub fn consume_line(&mut self) {
+        let (index, _) = self
+            .buffer
+            .iter()
+            .enumerate()
+            .find(|e| *e.1 == b'\n')
+            .expect("Cannot consume if it isn't buffered");
+
+        self.buffer.drain(0..(index + 1));
     }
 }
 
@@ -159,6 +178,7 @@ impl<T: AsyncRead> AsyncRead for PeekableReader<T> {
 #[cfg(test)]
 mod tests {
     use crate::peekable_reader::PeekableReader;
+    use std::str::from_utf8;
     use tokio::io::{AsyncReadExt, BufReader};
     use tokio_test::io::Builder;
 
@@ -328,5 +348,37 @@ mod tests {
 
         assert_eq!(read_buf, vec![4, 5, 6, 7]);
         assert_eq!(read, 4);
+    }
+
+    #[tokio::test]
+    async fn test_peek_line() {
+        let mock = Builder::new().read(b"Hello\nWorld\n").build();
+
+        let mut reader = PeekableReader::new(BufReader::new(mock));
+        let mut read_buf = Vec::new();
+
+        let read = reader.peek_line(&mut read_buf).await.unwrap();
+        assert_eq!(from_utf8(read_buf.as_slice()).unwrap(), "Hello\n");
+
+        reader.consume(read);
+        read_buf.clear();
+        reader.peek_line(&mut read_buf).await.unwrap();
+
+        assert_eq!(from_utf8(read_buf.as_slice()).unwrap(), "World\n")
+    }
+
+    #[tokio::test]
+    async fn test_consume_line() {
+        let mock = Builder::new().read(b"Hello\nWorld\n").build();
+
+        let mut reader = PeekableReader::new(BufReader::new(mock));
+        let mut read_buf = Vec::new();
+
+        reader.peek_line(&mut read_buf).await.unwrap();
+        read_buf.clear();
+        reader.consume_line();
+        reader.read_line(&mut read_buf).await.unwrap();
+
+        assert_eq!(from_utf8(read_buf.as_slice()).unwrap(), "World\n")
     }
 }

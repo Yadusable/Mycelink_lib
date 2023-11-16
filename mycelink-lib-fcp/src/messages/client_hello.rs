@@ -1,10 +1,10 @@
 use crate::messages::FCPEncodable;
 use crate::model::fcp_version::FCPVersion;
-use crate::model::message_identifier::{ClientMessageIdentifier, MessageIdentifier};
+use crate::model::message_type_identifier::ClientMessageType;
 use async_trait::async_trait;
 
 pub const EXPECTED_VERSION: FCPVersion = FCPVersion::V2_0;
-const IDENTIFIER: ClientMessageIdentifier = ClientMessageIdentifier::ClientHello;
+const IDENTIFIER: ClientMessageType = ClientMessageType::ClientHello;
 
 pub struct ClientHelloMessage {
     pub name: Box<str>,
@@ -17,7 +17,7 @@ impl FCPEncodable for ClientHelloMessage {
         let mut builder = String::new();
 
         builder.push_str(IDENTIFIER.name());
-        builder.push_str("Name=");
+        builder.push_str("\nName=");
         builder.push_str(&self.name);
         builder.push_str("\nExpectedVersion=");
         builder.push_str(self.version.name());

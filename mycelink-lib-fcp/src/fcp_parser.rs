@@ -1,9 +1,7 @@
 use crate::decode_error::DecodeError;
-use crate::decode_error::DecodeError::{ExpectedDifferentMessage, UnknownMessageIdentifier};
+use crate::decode_error::DecodeError::{ExpectedDifferentMessageType, UnknownMessageType};
 use crate::model::fields::{Field, Fields};
-use crate::model::message_identifier::{
-    MessageIdentifier, NodeMessageIdentifier, NODE_MESSAGE_IDENTIFIERS,
-};
+use crate::model::message_type_identifier::{NodeMessageType, NODE_MESSAGE_TYPES};
 use crate::peekable_reader::PeekableReader;
 use tokio::io::{AsyncRead, BufReader};
 
@@ -21,30 +19,30 @@ impl<'a, T: AsyncRead + Unpin> FCPParser<'a, T> {
 
     pub async fn expect_node_identifier(
         &mut self,
-        expected: NodeMessageIdentifier,
+        expected: NodeMessageType,
     ) -> Result<(), DecodeError> {
         let read = self.peek_node_identifier().await?;
 
         if read == expected {
-            self.reader.consume(read.name().len());
+            self.reader.consume(read.name().len() + 1);
             Ok(())
         } else {
-            Err(ExpectedDifferentMessage {
+            Err(ExpectedDifferentMessageType {
                 expected,
                 got: read,
             })
         }
     }
 
-    pub async fn peek_node_identifier(&mut self) -> Result<NodeMessageIdentifier, DecodeError> {
+    pub async fn peek_node_identifier(&mut self) -> Result<NodeMessageType, DecodeError> {
         let mut buf = Vec::new();
         self.reader.peek_until(&mut buf, &[b'\n']).await?;
 
-        match NODE_MESSAGE_IDENTIFIERS
+        match NODE_MESSAGE_TYPES
             .iter()
-            .find(|e| e.name().as_bytes() == buf.as_slice())
+            .find(|e| e.name().as_bytes() == buf.as_slice().split_at(buf.len() - 1).0)
         {
-            None => Err(UnknownMessageIdentifier {
+            None => Err(UnknownMessageType {
                 got: String::from_utf8_lossy(buf.as_slice()).into(),
             }),
             Some(found) => Ok(*found),

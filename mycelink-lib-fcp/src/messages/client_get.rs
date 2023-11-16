@@ -1,5 +1,5 @@
 use crate::messages::FCPEncodable;
-use crate::model::message_identifier::{ClientMessageIdentifier, MessageIdentifier};
+use crate::model::message_type_identifier::ClientMessageType;
 use crate::model::persistence::Persistence;
 use crate::model::priority_class::PriorityClass;
 use crate::model::return_type::ReturnType;
@@ -8,7 +8,7 @@ use crate::model::uri::URI;
 use crate::model::verbosity::Verbosity;
 use async_trait::async_trait;
 
-const IDENTIFIER: ClientMessageIdentifier = ClientMessageIdentifier::ClientGet;
+const IDENTIFIER: ClientMessageType = ClientMessageType::ClientGet;
 
 pub struct ClientGetMessage {
     identifier: UniqueIdentifier,

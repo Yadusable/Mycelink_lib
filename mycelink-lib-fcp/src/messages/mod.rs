@@ -6,7 +6,7 @@ use crate::decode_error::DecodeError;
 use crate::fcp_parser::FCPParser;
 use crate::messages::client_hello::ClientHelloMessage;
 use crate::messages::node_hello::NodeHelloMessage;
-use crate::model::message_identifier::NodeMessageIdentifier;
+use crate::model::message_type_identifier::NodeMessageType;
 use crate::peekable_reader::PeekableReader;
 use async_trait::async_trait;
 use tokio::io::AsyncRead;
@@ -32,7 +32,7 @@ impl NodeMessage {
         reader: &mut FCPParser<'_, impl AsyncRead + Unpin + Send>,
     ) -> Result<NodeMessage, DecodeError> {
         match reader.peek_node_identifier().await? {
-            NodeMessageIdentifier::NodeHello => Ok(NodeMessage::NodeHello(
+            NodeMessageType::NodeHello => Ok(NodeMessage::NodeHello(
                 NodeHelloMessage::decode(reader).await?,
             )),
         }

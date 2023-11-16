@@ -1,7 +1,8 @@
 pub mod connection_identifier;
 pub mod fcp_version;
 pub mod fields;
-pub mod message_identifier;
+pub mod message;
+pub mod message_type_identifier;
 pub mod persistence;
 pub mod priority_class;
 pub mod return_type;

@@ -1,19 +1,21 @@
-use crate::model::message_identifier::{MessageIdentifier, NodeMessageIdentifier};
+use crate::model::message_type_identifier::NodeMessageType;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
+use std::str::Utf8Error;
 
 #[derive(Debug)]
 pub enum DecodeError {
     TokioIoError(tokio::io::Error),
     ProtocolBreak(Box<str>),
-    ExpectedDifferentMessage {
-        expected: NodeMessageIdentifier,
-        got: NodeMessageIdentifier,
+    ExpectedDifferentMessageType {
+        expected: NodeMessageType,
+        got: NodeMessageType,
     },
-    UnknownMessageIdentifier {
+    UnknownMessageType {
         got: Box<str>,
     },
     ParseError(Box<str>),
+    Utf8Error(Utf8Error),
     InvalidVersion(Box<str>),
     MissingField(Box<str>),
 }
@@ -22,7 +24,7 @@ impl Display for DecodeError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             DecodeError::TokioIoError(inner) => Display::fmt(inner, f),
-            DecodeError::ExpectedDifferentMessage { expected, got } => {
+            DecodeError::ExpectedDifferentMessageType { expected, got } => {
                 write!(
                     f,
                     "Expected '{}' but got '{}' as FCP message type while decoding.",
@@ -30,8 +32,8 @@ impl Display for DecodeError {
                     got.name()
                 )
             }
-            DecodeError::UnknownMessageIdentifier { got } => {
-                write!(f, "Could not parse '{got}' as MessageIdentifier")
+            DecodeError::UnknownMessageType { got } => {
+                write!(f, "Could not parse '{got}' as MessageType")
             }
             DecodeError::ParseError(inner) => {
                 write!(f, "Parse error: {inner}")
@@ -45,6 +47,9 @@ impl Display for DecodeError {
             DecodeError::ProtocolBreak(inner) => {
                 write!(f, "Protocol Break: {inner}")
             }
+            DecodeError::Utf8Error(inner) => {
+                write!(f, "Utf8Error: {inner}")
+            }
         }
     }
 }
@@ -54,5 +59,11 @@ impl Error for DecodeError {}
 impl From<tokio::io::Error> for DecodeError {
     fn from(value: std::io::Error) -> Self {
         DecodeError::TokioIoError(value)
+    }
+}
+
+impl From<Utf8Error> for DecodeError {
+    fn from(value: Utf8Error) -> Self {
+        DecodeError::Utf8Error(value)
     }
 }

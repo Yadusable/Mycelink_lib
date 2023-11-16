@@ -4,6 +4,7 @@ use crate::model::fields::Fields;
 use crate::model::message_type_identifier::MessageType;
 use crate::peekable_reader_legacy::PeekableReaderLegacy;
 use tokio::io::{AsyncRead, BufReader};
+use crate::peekable_reader::PeekableReader;
 
 pub struct Message {
     message_identifier: &'static MessageType,
@@ -38,7 +39,7 @@ impl FCPEncodable for Message {
 
 impl Message {
     async fn decode(
-        encoded: &mut PeekableReaderLegacy<BufReader<impl AsyncRead + Unpin + Send>>,
+        encoded: &mut PeekableReader<impl AsyncRead + Unpin>,
     ) -> Result<Self, DecodeError> {
         let message_type = MessageType::decode(encoded).await?;
         let fields = Fields::decode(encoded).await?;

@@ -18,6 +18,7 @@ pub enum DecodeError {
     Utf8Error(Utf8Error),
     InvalidVersion(Box<str>),
     MissingField(Box<str>),
+    UnexpectedEOF,
 }
 
 impl Display for DecodeError {
@@ -49,6 +50,9 @@ impl Display for DecodeError {
             }
             DecodeError::Utf8Error(inner) => {
                 write!(f, "Utf8Error: {inner}")
+            }
+            DecodeError::UnexpectedEOF => {
+                write!(f, "Unexpected EOF")
             }
         }
     }

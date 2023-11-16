@@ -1,7 +1,10 @@
 use crate::decode_error::DecodeError;
+use crate::decode_error::DecodeError::UnexpectedEOF;
 use crate::model::message_type_identifier::ClientMessageType::{ClientGet, ClientHello};
 use crate::model::message_type_identifier::NodeMessageType::NodeHello;
+use crate::peekable_reader::{PeekableReader, Peeker};
 use crate::peekable_reader_legacy::PeekableReaderLegacy;
+use std::ops::Deref;
 use std::str::from_utf8;
 use tokio::io::{AsyncRead, BufReader};
 
@@ -89,18 +92,18 @@ impl TryFrom<&str> for MessageType {
 
 impl MessageType {
     pub async fn decode(
-        encoded: &mut PeekableReaderLegacy<BufReader<impl AsyncRead + Unpin + Send>>,
+        encoded: &mut PeekableReader<impl AsyncRead + Unpin>,
     ) -> Result<Self, DecodeError>
     where
         Self: Sized,
     {
-        let mut buf = Vec::new();
-        let peeked_identifier_len = encoded.peek_line(&mut buf).await?;
-        let peeked_identifier = from_utf8(buf.as_slice())?.trim_end();
+        let mut peeker = Peeker::new(encoded);
+        let peeked_identifier = peeker.next_contentful_line().await?.ok_or(UnexpectedEOF)?;
 
-        let res = MessageType::try_from(peeked_identifier)?;
+        let res = MessageType::try_from(peeked_identifier.deref())?;
 
-        encoded.consume(peeked_identifier_len);
+        let stats = peeker.into();
+        encoded.advance_to_peeker_stats(stats);
 
         Ok(res)
     }

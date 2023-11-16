@@ -1,5 +1,6 @@
 use crate::decode_error::DecodeError;
-use crate::decode_error::DecodeError::ParseError;
+use crate::decode_error::DecodeError::{ParseError, UnexpectedEOF};
+use crate::peekable_reader::{PeekableReader, Peeker};
 use crate::peekable_reader_legacy::PeekableReaderLegacy;
 use std::slice::Iter;
 use std::str::from_utf8;
@@ -25,32 +26,27 @@ impl Fields {
     }
 
     pub async fn decode(
-        encoded: &mut PeekableReaderLegacy<BufReader<impl AsyncRead + Unpin + Send>>,
+        encoded: &mut PeekableReader<impl AsyncRead + Unpin>,
     ) -> Result<Self, DecodeError> {
-        let mut buf = Vec::new();
+        let mut peeker = Peeker::new(encoded);
         let mut fields: Vec<Field> = Vec::new();
-        let mut read_len;
-        let mut line;
 
-        loop {
-            read_len = encoded.peek_line(&mut buf).await?;
-            line = from_utf8(buf.as_slice())?.trim_end();
-            if Field::is_field(line) {
-                fields.push(line.try_into()?);
-                encoded.consume(read_len);
-                buf.clear();
-            } else {
-                break;
-            }
+        let mut line = peeker.next_contentful_line().await?.ok_or(UnexpectedEOF)?;
+
+        while line.as_ref() != END_MESSAGE_LIT && line.as_ref() != DATA_LIT {
+            fields.push(line.as_ref().try_into()?);
+            line = peeker.next_contentful_line().await?.ok_or(UnexpectedEOF)?;
         }
 
-        if line != END_MESSAGE_LIT && line != DATA_LIT {
+        if line.as_ref() != END_MESSAGE_LIT && line.as_ref() != DATA_LIT {
             return Err(ParseError(
                 format!("'{line}' neither indicates the end of a Fields nor is a field itself.")
                     .into(),
             ));
         }
 
+        let stats = peeker.into();
+        encoded.advance_to_peeker_stats(stats);
         Ok(fields.into())
     }
 }

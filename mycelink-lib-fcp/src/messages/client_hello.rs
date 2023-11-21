@@ -29,8 +29,8 @@ impl From<ClientHelloMessage> for Message {
 #[cfg(test)]
 mod tests {
     use crate::messages::client_hello::{ClientHelloMessage, EXPECTED_VERSION};
-    use crate::messages::ClientMessage::ClientHello;
-    use crate::model::message::Message;
+    use crate::model::message::ClientMessage::ClientHello;
+    use crate::model::message::FCPEncodable;
 
     #[test]
     fn test_encode() {
@@ -39,7 +39,7 @@ mod tests {
             name: "Encode-Test".into(),
         });
 
-        let encoded = Into::<Message>::into(client_hello).encode();
+        let encoded = client_hello.to_message().encode();
 
         assert_eq!(
             encoded.as_str(),

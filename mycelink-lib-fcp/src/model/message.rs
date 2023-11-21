@@ -1,5 +1,6 @@
 use crate::decode_error::DecodeError;
-use crate::messages::MessagePayload;
+use crate::messages::client_hello::ClientHelloMessage;
+use crate::messages::node_hello::NodeHelloMessage;
 use crate::model::fields::{Fields, END_MESSAGE_LIT};
 use crate::model::message_type_identifier::MessageType;
 use crate::peekable_reader::{PeekableReader, Peeker};
@@ -82,5 +83,33 @@ impl Message {
         }
 
         todo!("Cannot recover from failed message parse yet")
+    }
+}
+
+pub enum ClientMessage {
+    ClientHello(ClientHelloMessage),
+}
+
+impl From<ClientMessage> for Message {
+    fn from(value: ClientMessage) -> Self {
+        match value {
+            ClientMessage::ClientHello(inner) => inner.into(),
+        }
+    }
+}
+
+pub enum NodeMessage {
+    NodeHello(NodeHelloMessage),
+}
+
+pub struct MessagePayload {}
+
+pub trait FCPEncodable {
+    fn to_message(self) -> Message;
+}
+
+impl<T: Into<Message>> FCPEncodable for T {
+    fn to_message(self) -> Message {
+        self.into()
     }
 }

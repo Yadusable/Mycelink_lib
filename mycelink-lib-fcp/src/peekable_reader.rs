@@ -99,8 +99,8 @@ impl<'a, T: AsyncRead + Unpin> Peeker<'a, T> {
         if self.next_line == 0 {
             panic!("Peeker hasn't been used yet and therefore has no current line")
         }
-        
-        self.reader.get_peeked_line(self.next_line-1).await
+
+        self.reader.get_peeked_line(self.next_line - 1).await
     }
 }
 

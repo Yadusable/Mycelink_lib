@@ -1,4 +1,4 @@
-use crate::model::message_type_identifier::{MessageType, NodeMessageType};
+use crate::model::message_type_identifier::MessageType;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::Utf8Error;

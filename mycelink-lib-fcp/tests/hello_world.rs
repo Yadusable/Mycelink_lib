@@ -1,12 +1,10 @@
-use mycelink_lib_fcp::fcp_parser_legacy::FCPParserLegacy;
 use mycelink_lib_fcp::messages::client_hello::{ClientHelloMessage, EXPECTED_VERSION};
 use mycelink_lib_fcp::messages::node_hello::NodeHelloMessage;
 use mycelink_lib_fcp::messages::ClientMessage::ClientHello;
-use mycelink_lib_fcp::messages::{FCPDecodable, FCPEncodable};
 use mycelink_lib_fcp::model::fcp_version::FCPVersion;
 use mycelink_lib_fcp::model::message::Message;
 use mycelink_lib_fcp::peekable_reader::PeekableReader;
-use tokio::io::{AsyncWriteExt, BufReader};
+use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 
 #[tokio::test]

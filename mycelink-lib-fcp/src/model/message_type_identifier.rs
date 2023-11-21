@@ -2,11 +2,9 @@ use crate::decode_error::DecodeError;
 use crate::decode_error::DecodeError::UnexpectedEOF;
 use crate::model::message_type_identifier::ClientMessageType::{ClientGet, ClientHello};
 use crate::model::message_type_identifier::NodeMessageType::NodeHello;
-use crate::peekable_reader::{PeekableReader, Peeker};
-use crate::peekable_reader_legacy::PeekableReaderLegacy;
+use crate::peekable_reader::Peeker;
 use std::ops::Deref;
-use std::str::from_utf8;
-use tokio::io::{AsyncRead, BufReader};
+use tokio::io::AsyncRead;
 
 pub const CLIENT_MESSAGE_TYPES: &[ClientMessageType] = &[ClientHello, ClientGet];
 pub const NODE_MESSAGE_TYPES: &[NodeMessageType] = &[NodeHello];

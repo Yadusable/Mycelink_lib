@@ -1,5 +1,5 @@
 use crate::decode_error::DecodeError;
-use crate::messages::{FCPEncodable, MessagePayload};
+use crate::messages::MessagePayload;
 use crate::model::fields::{Fields, END_MESSAGE_LIT};
 use crate::model::message_type_identifier::MessageType;
 use crate::peekable_reader::{PeekableReader, Peeker};
@@ -12,8 +12,8 @@ pub struct Message {
     payload: Option<MessagePayload>,
 }
 
-impl FCPEncodable for Message {
-    fn encode(&self) -> String {
+impl Message {
+    pub fn encode(&self) -> String {
         let mut builder = String::new();
 
         builder.push_str(self.message_type.name());

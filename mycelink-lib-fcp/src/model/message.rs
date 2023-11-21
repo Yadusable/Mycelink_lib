@@ -1,4 +1,5 @@
 use crate::decode_error::DecodeError;
+use crate::messages::client_get::ClientGetMessage;
 use crate::messages::client_hello::ClientHelloMessage;
 use crate::messages::node_hello::NodeHelloMessage;
 use crate::model::fields::{Fields, END_MESSAGE_LIT};
@@ -88,12 +89,14 @@ impl Message {
 
 pub enum ClientMessage {
     ClientHello(ClientHelloMessage),
+    ClientGet(ClientGetMessage),
 }
 
 impl From<ClientMessage> for Message {
     fn from(value: ClientMessage) -> Self {
         match value {
             ClientMessage::ClientHello(inner) => inner.into(),
+            ClientMessage::ClientGet(inner) => (&inner).into(),
         }
     }
 }

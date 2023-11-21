@@ -1,6 +1,7 @@
 use crate::decode_error::DecodeError;
 use crate::messages::client_get::ClientGetMessage;
 use crate::messages::client_hello::ClientHelloMessage;
+use crate::messages::client_put::ClientPutMessage;
 use crate::messages::node_hello::NodeHelloMessage;
 use crate::model::fields::{Fields, END_MESSAGE_LIT};
 use crate::model::message_type_identifier::MessageType;
@@ -90,6 +91,7 @@ impl Message {
 pub enum ClientMessage {
     ClientHello(ClientHelloMessage),
     ClientGet(ClientGetMessage),
+    ClientPut(ClientPutMessage),
 }
 
 impl From<ClientMessage> for Message {
@@ -97,6 +99,7 @@ impl From<ClientMessage> for Message {
         match value {
             ClientMessage::ClientHello(inner) => inner.into(),
             ClientMessage::ClientGet(inner) => (&inner).into(),
+            ClientMessage::ClientPut(inner) => (&inner).into(),
         }
     }
 }
@@ -105,7 +108,10 @@ pub enum NodeMessage {
     NodeHello(NodeHelloMessage),
 }
 
-pub struct MessagePayload {}
+pub struct MessagePayload {
+    pub data: Vec<u8>,
+    pub data_len_identifier: Box<str>,
+}
 
 pub trait FCPEncodable {
     fn to_message(self) -> Message;

@@ -1,4 +1,5 @@
 pub mod connection_identifier;
+pub mod content_type;
 pub mod fcp_version;
 pub mod fields;
 pub mod message;
@@ -7,5 +8,6 @@ pub mod persistence;
 pub mod priority_class;
 pub mod return_type;
 pub mod unique_identifier;
+pub mod upload_type;
 pub mod uri;
 pub mod verbosity;

@@ -13,6 +13,7 @@ pub const NODE_MESSAGE_TYPES: &[NodeMessageType] = &[NodeHello];
 pub enum ClientMessageType {
     ClientHello,
     ClientGet,
+    ClientPut,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -41,6 +42,7 @@ impl ClientMessageType {
         match self {
             ClientHello => "ClientHello",
             ClientGet => "ClientGet",
+            ClientMessageType::ClientPut => "ClientPut",
         }
     }
 }

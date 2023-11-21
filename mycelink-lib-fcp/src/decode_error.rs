@@ -1,4 +1,4 @@
-use crate::model::message_type_identifier::NodeMessageType;
+use crate::model::message_type_identifier::{MessageType, NodeMessageType};
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::Utf8Error;
@@ -8,8 +8,8 @@ pub enum DecodeError {
     TokioIoError(tokio::io::Error),
     ProtocolBreak(Box<str>),
     ExpectedDifferentMessageType {
-        expected: NodeMessageType,
-        got: NodeMessageType,
+        expected: MessageType,
+        got: MessageType,
     },
     UnknownMessageType {
         got: Box<str>,

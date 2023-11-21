@@ -44,3 +44,9 @@ impl Verbosity {
         res
     }
 }
+
+impl From<&Verbosity> for Box<str> {
+    fn from(value: &Verbosity) -> Self {
+        value.as_bitmask().to_string().into()
+    }
+}

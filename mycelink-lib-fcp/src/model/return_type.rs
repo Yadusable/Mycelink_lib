@@ -16,3 +16,9 @@ impl From<&ReturnType> for &str {
         }
     }
 }
+
+impl From<&ReturnType> for Box<str> {
+    fn from(value: &ReturnType) -> Self {
+        Into::<&str>::into(value).into()
+    }
+}

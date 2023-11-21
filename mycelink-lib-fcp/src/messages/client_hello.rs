@@ -48,6 +48,8 @@ impl FCPEncodable for ClientHelloMessage {
 mod tests {
     use crate::messages::client_hello::{ClientHelloMessage, EXPECTED_VERSION};
     use crate::messages::ClientMessage::ClientHello;
+    use crate::messages::FCPEncodable;
+    use crate::model::message::Message;
 
     #[test]
     fn test_encode() {
@@ -56,12 +58,10 @@ mod tests {
             name: "Encode-Test".into(),
         });
 
-        let encoded = client_hello.encode();
-
-        let str = String::from_utf8(encoded).unwrap();
+        let encoded = Into::<Message>::into(client_hello).encode();
 
         assert_eq!(
-            str.as_str(),
+            encoded.as_str(),
             "ClientHello\nName=Encode-Test\nExpectedVersion=2.0\nEndMessage\n"
         )
     }

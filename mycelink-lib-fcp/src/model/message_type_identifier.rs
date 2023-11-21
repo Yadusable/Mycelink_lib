@@ -54,6 +54,13 @@ impl MessageType {
             MessageType::Node(inner) => inner.name(),
         }
     }
+
+    pub fn is_specific_node_message(&self, matches: &NodeMessageType) -> bool {
+        match self {
+            MessageType::Client(_) => false,
+            MessageType::Node(inner) => inner == matches,
+        }
+    }
 }
 
 impl TryFrom<&str> for ClientMessageType {

@@ -1,11 +1,13 @@
 use crate::decode_error::DecodeError;
 use crate::decode_error::DecodeError::{ParseError, UnexpectedEOF};
 use crate::peekable_reader::Peeker;
+use std::borrow::Cow;
+use std::ops::Deref;
 use std::slice::Iter;
 use tokio::io::AsyncRead;
 
-pub const END_MESSAGE_LIT: &str = "EndMessage\n";
-pub const DATA_LIT: &str = "Data\n";
+pub const END_MESSAGE_LIT: &str = "EndMessage";
+pub const DATA_LIT: &str = "Data";
 
 pub struct Fields {
     fields: Vec<Field>,
@@ -30,7 +32,7 @@ impl Fields {
 
         let mut line = peeker.next_contentful_line().await?.ok_or(UnexpectedEOF)?;
 
-        while line.as_ref() != END_MESSAGE_LIT && line.as_ref() != DATA_LIT {
+        while Field::is_field(line.deref()) {
             fields.push(line.as_ref().try_into()?);
             line = peeker.next_contentful_line().await?.ok_or(UnexpectedEOF)?;
         }
@@ -47,12 +49,12 @@ impl Fields {
 }
 
 pub struct Field {
-    key: Box<str>,
+    key: Cow<'static, str>,
     value: Box<str>,
 }
 
 impl Field {
-    pub fn new(key: Box<str>, value: Box<str>) -> Self {
+    pub fn new(key: Cow<'static, str>, value: Box<str>) -> Self {
         Self { key, value }
     }
     pub fn key(&self) -> &str {
@@ -79,12 +81,12 @@ impl TryFrom<&str> for Field {
     fn try_from(encoded: &str) -> Result<Self, Self::Error> {
         let (key, value) = encoded.split_once('=').ok_or_else(|| {
             DecodeError::ParseError(
-                format!("{encoded} cannot be parsed as field as it contains no '='").into(),
+                format!("'{encoded}' cannot be parsed as field as it contains no '='").into(),
             )
         })?;
 
         Ok(Self {
-            key: key.into(),
+            key: key.to_string().into(),
             value: value.into(),
         })
     }

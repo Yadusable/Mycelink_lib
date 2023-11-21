@@ -58,7 +58,7 @@ impl Message {
         &self.payload
     }
 
-    async fn decode(
+    pub async fn decode(
         encoded: &mut PeekableReader<impl AsyncRead + Unpin>,
     ) -> Result<Self, DecodeError> {
         let mut peeker = Peeker::new(encoded);
@@ -81,6 +81,6 @@ impl Message {
             });
         }
 
-        todo!()
+        todo!("Cannot recover from failed message parse yet")
     }
 }

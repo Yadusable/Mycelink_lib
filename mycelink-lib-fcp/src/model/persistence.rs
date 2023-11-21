@@ -14,3 +14,9 @@ impl From<&Persistence> for &str {
         }
     }
 }
+
+impl From<&Persistence> for Box<str> {
+    fn from(value: &Persistence) -> Self {
+        Into::<&str>::into(value).into()
+    }
+}

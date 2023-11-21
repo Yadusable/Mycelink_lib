@@ -1,6 +1,7 @@
 use crate::decode_error::DecodeError;
 use crate::decode_error::DecodeError::{ExpectedDifferentMessageType, UnknownMessageType};
 use crate::model::fields::{Field, Fields};
+use crate::model::message_type_identifier::MessageType::Node;
 use crate::model::message_type_identifier::{NodeMessageType, NODE_MESSAGE_TYPES};
 use crate::peekable_reader_legacy::PeekableReaderLegacy;
 use tokio::io::{AsyncRead, BufReader};
@@ -29,8 +30,8 @@ impl<'a, T: AsyncRead + Unpin> FCPParserLegacy<'a, T> {
             Ok(())
         } else {
             Err(ExpectedDifferentMessageType {
-                expected,
-                got: read,
+                expected: Node(expected),
+                got: Node(read),
             })
         }
     }
@@ -51,6 +52,7 @@ impl<'a, T: AsyncRead + Unpin> FCPParserLegacy<'a, T> {
     }
 
     pub async fn parse_fields(&mut self) -> Result<Fields, DecodeError> {
+        todo!();
         let mut peek_buf = Vec::new();
         let mut results = Vec::new();
         while {

@@ -6,6 +6,7 @@ use crate::decode_error::DecodeError;
 use crate::fcp_parser_legacy::FCPParserLegacy;
 use crate::messages::client_hello::ClientHelloMessage;
 use crate::messages::node_hello::NodeHelloMessage;
+use crate::model::message::Message;
 use crate::model::message_type_identifier::NodeMessageType;
 use crate::peekable_reader_legacy::PeekableReaderLegacy;
 use async_trait::async_trait;
@@ -19,6 +20,14 @@ impl ClientMessage {
     pub fn encode(&self) -> Vec<u8> {
         match self {
             ClientMessage::ClientHello(inner) => inner.encode().into_bytes(),
+        }
+    }
+}
+
+impl From<ClientMessage> for Message {
+    fn from(value: ClientMessage) -> Self {
+        match value {
+            ClientMessage::ClientHello(inner) => inner.into(),
         }
     }
 }

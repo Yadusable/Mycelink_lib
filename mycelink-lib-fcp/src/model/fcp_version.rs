@@ -1,4 +1,5 @@
 use crate::decode_error::DecodeError;
+use crate::model::fields::Field;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum FCPVersion {
@@ -22,6 +23,18 @@ impl TryFrom<&str> for FCPVersion {
             _default => Err(DecodeError::ParseError(
                 format!("Failed parsing {value} as a valid FCP version").into(),
             )),
+        }
+    }
+}
+
+impl TryFrom<&Field> for FCPVersion {
+    type Error = DecodeError;
+
+    fn try_from(value: &Field) -> Result<Self, Self::Error> {
+        if value.key() == "FCPVersion" {
+            Ok(value.value().try_into()?)
+        } else {
+            Err(DecodeError::MissingField("FCPVersion".into()))
         }
     }
 }

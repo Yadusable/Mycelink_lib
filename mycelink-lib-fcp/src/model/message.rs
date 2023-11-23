@@ -1,9 +1,10 @@
 use crate::decode_error::DecodeError;
+use crate::messages::all_data::AllDataMessage;
 use crate::messages::client_get::ClientGetMessage;
 use crate::messages::client_hello::ClientHelloMessage;
 use crate::messages::client_put::ClientPutMessage;
 use crate::messages::node_hello::NodeHelloMessage;
-use crate::model::fields::{Fields, END_MESSAGE_LIT};
+use crate::model::fields::{Fields, DATA_LIT, END_MESSAGE_LIT};
 use crate::model::message_type_identifier::MessageType;
 use crate::peekable_reader::{PeekableReader, Peeker};
 use std::ops::Deref;
@@ -16,7 +17,7 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn encode(&self) -> String {
+    pub fn encode(&self) -> Vec<u8> {
         let mut builder = String::new();
 
         builder.push_str(self.message_type.name());
@@ -30,13 +31,26 @@ impl Message {
         }
 
         match &self.payload {
-            None => builder.push_str("EndMessage\n"),
-            Some(_payload) => {
-                todo!()
+            None => {
+                builder.push_str(END_MESSAGE_LIT);
+                builder.push('\n');
+                builder.into_bytes()
+            }
+            Some(payload) => {
+                builder.push_str(payload.data_len_identifier.deref());
+                builder.push('=');
+                builder.push_str(payload.data.len().to_string().as_str());
+                builder.push('\n');
+
+                builder.push_str(DATA_LIT);
+
+                let mut buf = builder.into_bytes();
+
+                buf.extend_from_slice(payload.data.as_slice());
+
+                buf
             }
         }
-
-        builder
     }
 }
 
@@ -57,8 +71,8 @@ impl Message {
         &self.fields
     }
 
-    pub fn payload(&self) -> &Option<MessagePayload> {
-        &self.payload
+    pub fn payload(self) -> Option<MessagePayload> {
+        self.payload
     }
 
     pub async fn decode(
@@ -106,6 +120,7 @@ impl From<ClientMessage> for Message {
 
 pub enum NodeMessage {
     NodeHello(NodeHelloMessage),
+    AllData(AllDataMessage),
 }
 
 pub struct MessagePayload {

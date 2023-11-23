@@ -2,6 +2,7 @@ use crate::decode_error::DecodeError;
 use mime::Mime;
 use std::str::FromStr;
 
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct ContentType {
     inner: Mime,
 }

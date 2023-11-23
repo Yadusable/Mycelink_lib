@@ -42,8 +42,8 @@ mod tests {
         let encoded = client_hello.to_message().encode();
 
         assert_eq!(
-            encoded.as_str(),
-            "ClientHello\nName=Encode-Test\nExpectedVersion=2.0\nEndMessage\n"
+            encoded.as_slice(),
+            "ClientHello\nName=Encode-Test\nExpectedVersion=2.0\nEndMessage\n".as_bytes()
         )
     }
 }

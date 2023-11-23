@@ -18,6 +18,7 @@ pub enum DecodeError {
     Utf8Error(Utf8Error),
     InvalidVersion(Box<str>),
     MissingField(Box<str>),
+    MissingPayload,
     UnexpectedEOF,
 }
 
@@ -53,6 +54,9 @@ impl Display for DecodeError {
             }
             DecodeError::UnexpectedEOF => {
                 write!(f, "Unexpected EOF")
+            }
+            DecodeError::MissingPayload => {
+                write!(f, "Message is missing Payload")
             }
         }
     }

@@ -1,13 +1,13 @@
 use crate::decode_error::DecodeError;
 use crate::decode_error::DecodeError::UnexpectedEOF;
 use crate::model::message_type_identifier::ClientMessageType::{ClientGet, ClientHello};
-use crate::model::message_type_identifier::NodeMessageType::NodeHello;
+use crate::model::message_type_identifier::NodeMessageType::{AllData, NodeHello};
 use crate::peekable_reader::Peeker;
 use std::ops::Deref;
 use tokio::io::AsyncRead;
 
 pub const CLIENT_MESSAGE_TYPES: &[ClientMessageType] = &[ClientHello, ClientGet];
-pub const NODE_MESSAGE_TYPES: &[NodeMessageType] = &[NodeHello];
+pub const NODE_MESSAGE_TYPES: &[NodeMessageType] = &[NodeHello, AllData];
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ClientMessageType {
@@ -19,6 +19,7 @@ pub enum ClientMessageType {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum NodeMessageType {
     NodeHello,
+    AllData,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -32,6 +33,7 @@ impl NodeMessageType {
     pub fn name(&self) -> &'static str {
         match self {
             NodeHello => "NodeHello",
+            AllData => "AllData",
         }
     }
 }

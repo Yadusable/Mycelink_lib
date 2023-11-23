@@ -18,7 +18,7 @@ async fn test_client_hello() {
 
     let encoded = client_hello.to_message().encode();
 
-    stream.write_all(encoded.as_bytes()).await.unwrap();
+    stream.write_all(encoded.as_slice()).await.unwrap();
 
     let (rx, _tx) = stream.split();
 

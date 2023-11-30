@@ -1,12 +1,17 @@
+use mycelink_lib_fcp::messages::all_data::AllDataMessage;
+use mycelink_lib_fcp::messages::client_get::ClientGetMessage;
 use mycelink_lib_fcp::messages::client_hello::{ClientHelloMessage, EXPECTED_VERSION};
 use mycelink_lib_fcp::messages::client_put::ClientPutMessage;
+use mycelink_lib_fcp::messages::data_found::DataFoundMessage;
 use mycelink_lib_fcp::messages::node_hello::NodeHelloMessage;
 use mycelink_lib_fcp::messages::put_successful::PutSuccessfulMessage;
+use mycelink_lib_fcp::messages::uri_generated::UriGeneratedMessage;
 use mycelink_lib_fcp::model::fcp_version::FCPVersion;
-use mycelink_lib_fcp::model::message::ClientMessage::{ClientHello, ClientPut};
+use mycelink_lib_fcp::model::message::ClientMessage::{ClientGet, ClientHello, ClientPut};
 use mycelink_lib_fcp::model::message::{FCPEncodable, Message};
 use mycelink_lib_fcp::model::persistence::Persistence;
 use mycelink_lib_fcp::model::priority_class::PriorityClass;
+use mycelink_lib_fcp::model::return_type::ReturnType;
 use mycelink_lib_fcp::model::unique_identifier::UniqueIdentifier;
 use mycelink_lib_fcp::model::upload_type::UploadType;
 use mycelink_lib_fcp::model::verbosity::Verbosity;
@@ -81,11 +86,55 @@ async fn integration_put_get() {
 
     tx.write_all(encoded.as_slice()).await.unwrap();
 
-    let _message = Message::decode(&mut peekable_reader).await.unwrap();
-    //TODO check for generated uri message
+    let message = Message::decode(&mut peekable_reader).await.unwrap();
+    let generated_uri_message: UriGeneratedMessage = message.try_into().unwrap();
 
     let message = Message::decode(&mut peekable_reader).await.unwrap();
     let put_sucessful: PutSuccessfulMessage = message.try_into().unwrap();
 
-    assert_eq!(put_sucessful.identifier, client_put_identifier)
+    assert_eq!(generated_uri_message.URI, put_sucessful.URI);
+    assert_eq!(put_sucessful.identifier, client_put_identifier);
+
+    // Get
+    // #############################################################################################
+    let client_get_identifier = UniqueIdentifier::new("Get Message");
+    let client_get_message = ClientGet(ClientGetMessage {
+        identifier: client_get_identifier.clone(),
+        uri: generated_uri_message.URI,
+        verbosity: Verbosity {
+            simple_progress: false,
+            sending_to_network: false,
+            compatibility_mode: false,
+            expected_hashes: false,
+            expected_mime: false,
+            expected_data_length: false,
+        },
+        return_type: ReturnType::Direct,
+        max_size: None,
+        max_temp_size: None,
+        max_retries: 0,
+        priority: PriorityClass::Maximum,
+        persistence: Persistence::Connection,
+        ignore_data_store: false,
+        data_store_only: false,
+        real_time: false,
+    });
+
+    let encoded = client_get_message.to_message().encode();
+    tx.write_all(encoded.as_slice()).await.unwrap();
+
+    let message = Message::decode(&mut peekable_reader).await.unwrap();
+    let _data_found: DataFoundMessage = message.try_into().unwrap();
+
+    let message = Message::decode(&mut peekable_reader).await.unwrap();
+    let all_data_message: AllDataMessage = message.try_into().unwrap();
+
+    assert_eq!(
+        all_data_message,
+        AllDataMessage {
+            identifier: client_get_identifier,
+            content_type: "application/octet-stream".parse().unwrap(),
+            data: payload_bytes.to_vec(),
+        }
+    )
 }

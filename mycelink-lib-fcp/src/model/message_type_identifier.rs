@@ -3,7 +3,7 @@ use crate::decode_error::DecodeError::UnexpectedEOF;
 use crate::model::message_type_identifier::ClientMessageType::{ClientGet, ClientHello};
 use crate::model::message_type_identifier::MessageType::Node;
 use crate::model::message_type_identifier::NodeMessageType::{
-    AllData, NodeHello, PutSuccessful, URIGenerated,
+    AllData, DataFound, NodeHello, PutSuccessful, URIGenerated,
 };
 use crate::peekable_reader::Peeker;
 use std::ops::Deref;
@@ -11,7 +11,7 @@ use tokio::io::AsyncRead;
 
 pub const CLIENT_MESSAGE_TYPES: &[ClientMessageType] = &[ClientHello, ClientGet];
 pub const NODE_MESSAGE_TYPES: &[NodeMessageType] =
-    &[NodeHello, AllData, PutSuccessful, URIGenerated];
+    &[NodeHello, AllData, PutSuccessful, URIGenerated, DataFound];
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ClientMessageType {
@@ -26,6 +26,7 @@ pub enum NodeMessageType {
     AllData,
     PutSuccessful,
     URIGenerated,
+    DataFound,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -40,8 +41,9 @@ impl NodeMessageType {
         match self {
             NodeHello => "NodeHello",
             AllData => "AllData",
-            NodeMessageType::PutSuccessful => "PutSuccessful",
-            NodeMessageType::URIGenerated => "URIGenerated",
+            PutSuccessful => "PutSuccessful",
+            URIGenerated => "URIGenerated",
+            DataFound => "DataFound",
         }
     }
 }

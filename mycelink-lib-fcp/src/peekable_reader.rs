@@ -49,7 +49,7 @@ impl<T: AsyncRead + Unpin> PeekableReader<T> {
 
     pub async fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), tokio::io::Error> {
         assert!(
-            !self.peekable_lines.is_empty(),
+            self.peekable_lines.is_empty(),
             "Cannot read while lines are still cached"
         );
 

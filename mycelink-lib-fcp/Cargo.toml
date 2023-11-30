@@ -10,7 +10,9 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1.33", features = ["io-util"] }
 pin-project-lite = "0.2"
-async-trait = "0.1.74"
+rand = "0.8.5"
+base64 = "0.21.5"
+mime = "0.3.17"
 
 [dev-dependencies]
 tokio-test = "0.4.3"

@@ -1,36 +1,36 @@
-use crate::messages::FCPEncodable;
 use crate::model::fcp_version::FCPVersion;
-use crate::model::message_identifier::MessageIdentifier;
-use async_trait::async_trait;
+use crate::model::fields::Field;
+use crate::model::message::Message;
+use crate::model::message_type_identifier::ClientMessageType::ClientHello;
+use crate::model::message_type_identifier::MessageType;
 
 pub const EXPECTED_VERSION: FCPVersion = FCPVersion::V2_0;
-const IDENTIFIER: MessageIdentifier = MessageIdentifier::ClientHello;
+const MESSAGE_TYPE: MessageType = MessageType::Client(ClientHello);
 
 pub struct ClientHelloMessage {
-    pub name: String,
+    pub name: Box<str>,
     pub version: FCPVersion,
 }
 
-#[async_trait]
-impl FCPEncodable for ClientHelloMessage {
-    fn encode(&self) -> String {
-        let mut builder = String::new();
-
-        builder.push_str(IDENTIFIER.name());
-        builder.push_str("Name=");
-        builder.push_str(self.name.as_str());
-        builder.push_str("\nExpectedVersion=");
-        builder.push_str(self.version.name());
-        builder.push_str("\nEndMessage\n");
-
-        builder
+impl From<ClientHelloMessage> for Message {
+    fn from(value: ClientHelloMessage) -> Self {
+        Message::new(
+            MESSAGE_TYPE,
+            vec![
+                Field::new("Name".into(), value.name),
+                Field::new("ExpectedVersion".into(), value.version.name().into()),
+            ]
+            .into(),
+            None,
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::messages::client_hello::{ClientHelloMessage, EXPECTED_VERSION};
-    use crate::messages::ClientMessage::ClientHello;
+    use crate::model::message::ClientMessage::ClientHello;
+    use crate::model::message::FCPEncodable;
 
     #[test]
     fn test_encode() {
@@ -39,13 +39,11 @@ mod tests {
             name: "Encode-Test".into(),
         });
 
-        let encoded = client_hello.encode();
-
-        let str = String::from_utf8(encoded).unwrap();
+        let encoded = client_hello.to_message().encode();
 
         assert_eq!(
-            str.as_str(),
-            "ClientHello\nName=Encode-Test\nExpectedVersion=2.0\nEndMessage\n"
+            encoded.as_slice(),
+            "ClientHello\nName=Encode-Test\nExpectedVersion=2.0\nEndMessage\n".as_bytes()
         )
     }
 }

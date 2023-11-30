@@ -1,11 +1,8 @@
 use crate::decode_error::DecodeError;
-use crate::fcp_parser::FCPParser;
-use crate::messages::FCPDecodable;
 use crate::model::connection_identifier::ConnectionIdentifier;
 use crate::model::fcp_version::FCPVersion;
-use crate::model::message_identifier::MessageIdentifier;
-use async_trait::async_trait;
-use tokio::io::AsyncRead;
+use crate::model::message::Message;
+use crate::model::message_type_identifier::NodeMessageType;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct NodeHelloMessage {
@@ -14,24 +11,18 @@ pub struct NodeHelloMessage {
     pub connection_identifier: ConnectionIdentifier,
 }
 
-#[async_trait]
-impl FCPDecodable for NodeHelloMessage {
-    async fn decode(
-        encoded: &mut FCPParser<impl AsyncRead + Unpin + Send>,
-    ) -> Result<Self, DecodeError>
-    where
-        Self: Sized,
-    {
-        encoded
-            .expect_identifier(MessageIdentifier::NodeHello)
-            .await?;
+impl TryFrom<Message> for NodeHelloMessage {
+    type Error = DecodeError;
 
-        let fields = encoded.parse_fields().await?;
+    fn try_from(value: Message) -> Result<Self, Self::Error> {
+        value
+            .message_type()
+            .expect_specific_node_message(NodeMessageType::NodeHello)?;
 
-        Ok(NodeHelloMessage {
-            fcp_version: fields.get("FCPVersion")?.value().try_into()?,
-            node: fields.get("Node")?.value().into(),
-            connection_identifier: fields.get("ConnectionIdentifier")?.value().into(),
+        Ok(Self {
+            fcp_version: value.fields().get("FCPVersion")?.try_into()?,
+            node: value.fields().get("Node")?.value().into(),
+            connection_identifier: value.fields().get("ConnectionIdentifier")?.value().into(),
         })
     }
 }

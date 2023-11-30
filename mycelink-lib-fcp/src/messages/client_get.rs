@@ -30,7 +30,7 @@ impl From<&ClientGetMessage> for Message {
     fn from(value: &ClientGetMessage) -> Self {
         let mut fields = vec![
             Field::new("Identifier".into(), (&value.identifier).into()),
-            Field::new("URI".into(), (&value.uri).into()),
+            Field::new("uri".into(), (&value.uri).into()),
             Field::new("Verbosity".into(), (&value.verbosity).into()),
             Field::new("ReturnType".into(), (&value.return_type).into()),
             Field::new("MaxRetries".into(), value.max_retries.to_string().into()),

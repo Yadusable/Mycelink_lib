@@ -11,6 +11,9 @@ use crate::model::message_type_identifier::MessageType;
 use crate::peekable_reader::{PeekableReader, Peeker};
 use std::ops::Deref;
 use tokio::io::AsyncRead;
+use crate::messages::skk_keypair::SKKKeypairMessage;
+use crate::messages::test_dda_complete::TestDDACompleteMessage;
+use crate::messages::test_dda_reply::TestDDAReplyMessage;
 
 pub struct Message {
     message_type: MessageType,
@@ -140,6 +143,7 @@ impl From<ClientMessage> for Message {
             ClientMessage::ClientHello(inner) => inner.into(),
             ClientMessage::ClientGet(inner) => (&inner).into(),
             ClientMessage::ClientPut(inner) => (&inner).into(),
+
         }
     }
 }
@@ -149,6 +153,9 @@ pub enum NodeMessage {
     AllData(AllDataMessage),
     URIGenerated(UriGeneratedMessage),
     PutSuccessful(PutSuccessfulMessage),
+    SKKKeypair(SKKKeypairMessage),
+    TestDDAReply(TestDDAReplyMessage),
+    TestDDAComplete(TestDDACompleteMessage)
 }
 
 pub struct MessagePayload {

@@ -1,17 +1,18 @@
 use std::collections::VecDeque;
 use std::ops::Sub;
+use std::str::from_utf8;
 use std::sync::Arc;
-use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader, Lines};
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, BufReader};
 
 pub struct PeekableReader<T: AsyncRead> {
-    inner: Lines<BufReader<T>>,
+    inner: BufReader<T>,
     peekable_lines: VecDeque<Arc<str>>,
 }
 
 impl<T: AsyncRead + Unpin> PeekableReader<T> {
     pub fn new(inner: T) -> Self {
         Self {
-            inner: BufReader::new(inner).lines(),
+            inner: BufReader::new(inner),
             peekable_lines: VecDeque::new(),
         }
     }
@@ -26,15 +27,14 @@ impl<T: AsyncRead + Unpin> PeekableReader<T> {
             return Ok(cached.cloned());
         }
 
-        let line = self.inner.next_line().await?;
-
-        if let Some(line) = line {
-            let line: Arc<str> = line.into();
-            self.peekable_lines.push_back(line.clone());
-            return Ok(Some(line));
+        let line = self.inner_read_line().await?;
+        match line {
+            None => Ok(None),
+            Some(line) => {
+                self.peekable_lines.push_back(line.clone());
+                Ok(Some(line))
+            }
         }
-
-        Ok(None)
     }
 
     pub async fn read_line(&mut self) -> Result<Option<Arc<str>>, tokio::io::Error> {
@@ -44,7 +44,31 @@ impl<T: AsyncRead + Unpin> PeekableReader<T> {
             return Ok(cached);
         }
 
-        self.inner.next_line().await.map(|e| e.map(|e| e.into()))
+        self.inner_read_line().await
+    }
+
+    pub async fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), tokio::io::Error> {
+        assert!(
+            !self.peekable_lines.is_empty(),
+            "Cannot read while lines are still cached"
+        );
+
+        self.inner.read_exact(buf).await?;
+
+        Ok(())
+    }
+
+    async fn inner_read_line(&mut self) -> Result<Option<Arc<str>>, tokio::io::Error> {
+        let mut buf = Vec::new();
+        let read_len = self.inner.read_until(b'\n', &mut buf).await?;
+
+        if read_len == 0 {
+            return Ok(None);
+        }
+
+        let line = from_utf8(buf.as_slice()).unwrap(); //todo for now just panic when encountering non utf8 data. Handle it gracefully in the future?
+
+        Ok(Some(line.split_at(line.len() - 1).0.into()))
     }
 
     pub async fn read_contentful_line(&mut self) -> Result<Option<Arc<str>>, tokio::io::Error> {

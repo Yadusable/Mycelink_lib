@@ -1,6 +1,7 @@
 use crate::model::message_type_identifier::MessageType;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
+use std::num::ParseIntError;
 use std::str::Utf8Error;
 
 #[derive(Debug)]
@@ -73,5 +74,13 @@ impl From<tokio::io::Error> for DecodeError {
 impl From<Utf8Error> for DecodeError {
     fn from(value: Utf8Error) -> Self {
         DecodeError::Utf8Error(value)
+    }
+}
+
+impl From<ParseIntError> for DecodeError {
+    fn from(value: ParseIntError) -> Self {
+        DecodeError::ParseError(
+            format!("Failed to parse integer (kind: {:?})", value.kind()).into(),
+        )
     }
 }

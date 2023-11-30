@@ -14,6 +14,10 @@ pub enum ClientMessageType {
     ClientHello,
     ClientGet,
     ClientPut,
+    ListPeer,
+    GenerateSSK,
+    TestDDARequest,
+    TestDDAResponse,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -45,6 +49,10 @@ impl ClientMessageType {
             ClientHello => "ClientHello",
             ClientGet => "ClientGet",
             ClientMessageType::ClientPut => "ClientPut",
+            ClientMessageType::ListPeer => "ListPeer",
+            ClientMessageType::GenerateSSK => "GenerateSSK",
+            ClientMessageType::TestDDARequest => "TestDDARequest",
+            ClientMessageType::TestDDAResponse => "TestDDAResponse",
         }
     }
 }

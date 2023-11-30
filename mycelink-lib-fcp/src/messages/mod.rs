@@ -3,3 +3,7 @@ pub mod client_get;
 pub mod client_hello;
 pub mod client_put;
 pub mod node_hello;
+pub mod list_peer;
+pub mod generate_ssk;
+pub mod test_dda_request;
+pub mod test_dda_response;

@@ -1,14 +1,17 @@
 use crate::decode_error::DecodeError;
 use crate::decode_error::DecodeError::UnexpectedEOF;
 use crate::model::message_type_identifier::ClientMessageType::{ClientGet, ClientHello};
-use crate::model::message_type_identifier::NodeMessageType::{AllData, NodeHello};
+use crate::model::message_type_identifier::MessageType::Node;
+use crate::model::message_type_identifier::NodeMessageType::{
+    AllData, NodeHello, PutSuccessful, URIGenerated,
+};
 use crate::peekable_reader::Peeker;
 use std::ops::Deref;
 use tokio::io::AsyncRead;
-use crate::model::message_type_identifier::MessageType::Node;
 
 pub const CLIENT_MESSAGE_TYPES: &[ClientMessageType] = &[ClientHello, ClientGet];
-pub const NODE_MESSAGE_TYPES: &[NodeMessageType] = &[NodeHello, AllData];
+pub const NODE_MESSAGE_TYPES: &[NodeMessageType] =
+    &[NodeHello, AllData, PutSuccessful, URIGenerated];
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ClientMessageType {
@@ -22,6 +25,7 @@ pub enum NodeMessageType {
     NodeHello,
     AllData,
     PutSuccessful,
+    URIGenerated,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -37,6 +41,7 @@ impl NodeMessageType {
             NodeHello => "NodeHello",
             AllData => "AllData",
             NodeMessageType::PutSuccessful => "PutSuccessful",
+            NodeMessageType::URIGenerated => "URIGenerated",
         }
     }
 }
@@ -66,14 +71,19 @@ impl MessageType {
             MessageType::Node(inner) => inner == &matches,
         }
     }
-    
-    pub fn expect_specific_node_message(&self, matches: NodeMessageType) -> Result<(), DecodeError> {
+
+    pub fn expect_specific_node_message(
+        &self,
+        matches: NodeMessageType,
+    ) -> Result<(), DecodeError> {
         if !self.is_specific_node_message(matches) {
             Err(DecodeError::ExpectedDifferentMessageType {
                 expected: Node(matches),
                 got: *self,
             })
-        } else { Ok(()) }
+        } else {
+            Ok(())
+        }
     }
 }
 

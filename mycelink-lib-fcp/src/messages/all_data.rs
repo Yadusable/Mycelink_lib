@@ -1,41 +1,34 @@
 use crate::decode_error::DecodeError;
 use crate::model::content_type::ContentType;
 use crate::model::message::Message;
-use crate::model::message_type_identifier::MessageType::Node;
 use crate::model::message_type_identifier::NodeMessageType;
 use crate::model::unique_identifier::UniqueIdentifier;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct AllDataMessage {
-    identifier: UniqueIdentifier,
-    content_type: ContentType,
+    pub identifier: UniqueIdentifier,
+    pub content_type: ContentType,
 
-    data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 impl TryFrom<Message> for AllDataMessage {
     type Error = DecodeError;
 
     fn try_from(value: Message) -> Result<Self, Self::Error> {
-        if value
+        value
             .message_type()
-            .is_specific_node_message(&NodeMessageType::AllData)
-        {
-            Ok(Self {
-                identifier: value.fields().get("Identifier")?.value().try_into()?,
-                content_type: value
-                    .fields()
-                    .get("Metadata.ContentType")?
-                    .value()
-                    .parse()?,
-                data: value.payload().ok_or(DecodeError::MissingPayload)?.data,
-            })
-        } else {
-            Err(DecodeError::ExpectedDifferentMessageType {
-                expected: Node(NodeMessageType::AllData),
-                got: value.message_type(),
-            })
-        }
+            .expect_specific_node_message(NodeMessageType::AllData)?;
+
+        Ok(Self {
+            identifier: value.fields().get("Identifier")?.value().try_into()?,
+            content_type: value
+                .fields()
+                .get("Metadata.ContentType")?
+                .value()
+                .parse()?,
+            data: value.payload().ok_or(DecodeError::MissingPayload)?.data,
+        })
     }
 }
 

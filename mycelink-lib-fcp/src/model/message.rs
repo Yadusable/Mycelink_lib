@@ -4,6 +4,8 @@ use crate::messages::client_get::ClientGetMessage;
 use crate::messages::client_hello::ClientHelloMessage;
 use crate::messages::client_put::ClientPutMessage;
 use crate::messages::node_hello::NodeHelloMessage;
+use crate::messages::put_successful::PutSuccessfulMessage;
+use crate::messages::uri_generated::UriGeneratedMessage;
 use crate::model::fields::{Fields, DATA_LIT, END_MESSAGE_LIT};
 use crate::model::message_type_identifier::MessageType;
 use crate::peekable_reader::{PeekableReader, Peeker};
@@ -43,6 +45,7 @@ impl Message {
                 builder.push('\n');
 
                 builder.push_str(DATA_LIT);
+                builder.push('\n');
 
                 let mut buf = builder.into_bytes();
 
@@ -144,6 +147,8 @@ impl From<ClientMessage> for Message {
 pub enum NodeMessage {
     NodeHello(NodeHelloMessage),
     AllData(AllDataMessage),
+    URIGenerated(UriGeneratedMessage),
+    PutSuccessful(PutSuccessfulMessage),
 }
 
 pub struct MessagePayload {

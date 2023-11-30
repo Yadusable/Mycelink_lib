@@ -12,7 +12,7 @@ use crate::model::verbosity::Verbosity;
 
 pub struct ClientPutMessage {
     pub uri: URI,
-    pub content_type: ContentType,
+    pub content_type: Option<ContentType>,
     pub identifier: UniqueIdentifier,
     pub verbosity: Verbosity,
     pub max_retries: i32,
@@ -31,7 +31,6 @@ impl From<&ClientPutMessage> for Message {
         let mut fields = vec![
             Field::new("Identifier".into(), (&value.identifier).into()),
             Field::new("URI".into(), (&value.uri).into()),
-            Field::new("Metadata.ContentType".into(), (&value.content_type).into()),
             Field::new("Verbosity".into(), (&value.verbosity).into()),
             Field::new("MaxRetries".into(), value.max_retries.to_string().into()),
             Field::new("PriorityClass".into(), (&value.priority).into()),
@@ -46,6 +45,12 @@ impl From<&ClientPutMessage> for Message {
             Field::new("RealTimeFlag".into(), value.real_time.to_string().into()),
         ];
 
+        if let Some(content_type) = &value.content_type {
+            fields.push(Field::new(
+                "Metadata.ContentType".into(),
+                content_type.into(),
+            ));
+        }
         if let Some(filename) = &value.target_filename {
             fields.push(Field::new("TargetFilename".into(), filename.clone()))
         }

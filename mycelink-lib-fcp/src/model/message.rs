@@ -96,6 +96,29 @@ impl Message {
                 fields,
                 payload: None,
             });
+        } else if peeker
+            .current_line()
+            .await?
+            .map(|e| e.deref() == DATA_LIT)
+            .unwrap_or(false)
+        {
+            let stats = peeker.into();
+            encoded.advance_to_peeker_stats(stats);
+
+            let size_hint = fields.get_payload_size_hint()?;
+            let size_hint_key = size_hint.key().into();
+
+            let mut payload = vec![0; size_hint.value().parse()?];
+            encoded.read_exact(payload.as_mut_slice()).await?;
+
+            return Ok(Self {
+                message_type,
+                fields,
+                payload: Some(MessagePayload {
+                    data: payload,
+                    data_len_identifier: size_hint_key,
+                }),
+            });
         }
 
         todo!("Cannot recover from failed message parse yet")

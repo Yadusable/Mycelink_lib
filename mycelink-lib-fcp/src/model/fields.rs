@@ -9,6 +9,8 @@ use tokio::io::AsyncRead;
 pub const END_MESSAGE_LIT: &str = "EndMessage";
 pub const DATA_LIT: &str = "Data";
 
+const PAYLOAD_LENGTH_HINT_KEYS: &[&str] = &["DataLength"];
+
 pub struct Fields {
     fields: Vec<Field>,
 }
@@ -23,6 +25,24 @@ impl Fields {
             .iter()
             .find(|e| &*e.key == key)
             .ok_or(DecodeError::MissingField(key.into()))
+    }
+
+    pub fn get_payload_size_hint(&self) -> Result<&Field, DecodeError> {
+        let mut iter = self
+            .iter()
+            .filter(|e| PAYLOAD_LENGTH_HINT_KEYS.contains(&e.key()));
+        let first = iter.next();
+
+        match first {
+            None => Err(DecodeError::MissingField("PAYLOAD LENGTH HINT".into())),
+            Some(hint) => {
+                if iter.next().is_some() {
+                    todo!("How to handle if multiple hints match?")
+                } else {
+                    Ok(hint)
+                }
+            }
+        }
     }
 
     pub async fn decode(

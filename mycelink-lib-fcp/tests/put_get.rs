@@ -92,7 +92,7 @@ async fn integration_put_get() {
     let message = Message::decode(&mut peekable_reader).await.unwrap();
     let put_sucessful: PutSuccessfulMessage = message.try_into().unwrap();
 
-    assert_eq!(generated_uri_message.URI, put_sucessful.URI);
+    assert_eq!(generated_uri_message.uri, put_sucessful.uri);
     assert_eq!(put_sucessful.identifier, client_put_identifier);
 
     // Get
@@ -100,7 +100,7 @@ async fn integration_put_get() {
     let client_get_identifier = UniqueIdentifier::new("Get Message");
     let client_get_message = ClientGet(ClientGetMessage {
         identifier: client_get_identifier.clone(),
-        uri: generated_uri_message.URI,
+        uri: generated_uri_message.uri,
         verbosity: Verbosity {
             simple_progress: false,
             sending_to_network: false,

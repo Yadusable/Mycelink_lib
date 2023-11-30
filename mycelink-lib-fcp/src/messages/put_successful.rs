@@ -6,7 +6,7 @@ use crate::model::uri::URI;
 
 pub struct PutSuccessfulMessage {
     pub identifier: UniqueIdentifier,
-    pub URI: URI,
+    pub uri: URI,
 }
 
 impl TryFrom<Message> for PutSuccessfulMessage {
@@ -19,7 +19,7 @@ impl TryFrom<Message> for PutSuccessfulMessage {
 
         Ok(Self {
             identifier: value.fields().get("Identifier")?.value().try_into()?,
-            URI: value.fields().get("URI")?.value().try_into()?,
+            uri: value.fields().get("URI")?.value().try_into()?,
         })
     }
 }

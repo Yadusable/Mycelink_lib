@@ -10,27 +10,27 @@ use crate::model::uri::URI;
 use crate::model::verbosity::Verbosity;
 
 pub struct ClientGetMessage {
-    identifier: UniqueIdentifier,
-    uri: URI,
-    verbosity: Verbosity,
-    return_type: ReturnType,
-    max_size: Option<usize>,
-    max_temp_size: Option<usize>,
-    max_retries: i32,
-    priority: PriorityClass,
-    persistence: Persistence,
+    pub identifier: UniqueIdentifier,
+    pub uri: URI,
+    pub verbosity: Verbosity,
+    pub return_type: ReturnType,
+    pub max_size: Option<usize>,
+    pub max_temp_size: Option<usize>,
+    pub max_retries: i32,
+    pub priority: PriorityClass,
+    pub persistence: Persistence,
     /// Always fetches from external source
-    ignore_data_store: bool,
+    pub ignore_data_store: bool,
     /// Only checks in local datastore
-    data_store_only: bool,
-    real_time: bool,
+    pub data_store_only: bool,
+    pub real_time: bool,
 }
 
 impl From<&ClientGetMessage> for Message {
     fn from(value: &ClientGetMessage) -> Self {
         let mut fields = vec![
             Field::new("Identifier".into(), (&value.identifier).into()),
-            Field::new("URI".into(), (&value.uri).into()),
+            Field::new("uri".into(), (&value.uri).into()),
             Field::new("Verbosity".into(), (&value.verbosity).into()),
             Field::new("ReturnType".into(), (&value.return_type).into()),
             Field::new("MaxRetries".into(), value.max_retries.to_string().into()),

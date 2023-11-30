@@ -5,6 +5,7 @@ use crate::model::message_type_identifier::NodeMessageType::{AllData, NodeHello}
 use crate::peekable_reader::Peeker;
 use std::ops::Deref;
 use tokio::io::AsyncRead;
+use crate::model::message_type_identifier::MessageType::Node;
 
 pub const CLIENT_MESSAGE_TYPES: &[ClientMessageType] = &[ClientHello, ClientGet];
 pub const NODE_MESSAGE_TYPES: &[NodeMessageType] = &[NodeHello, AllData];
@@ -20,6 +21,7 @@ pub enum ClientMessageType {
 pub enum NodeMessageType {
     NodeHello,
     AllData,
+    PutSuccessful,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -34,6 +36,7 @@ impl NodeMessageType {
         match self {
             NodeHello => "NodeHello",
             AllData => "AllData",
+            NodeMessageType::PutSuccessful => "PutSuccessful",
         }
     }
 }
@@ -57,11 +60,20 @@ impl MessageType {
         }
     }
 
-    pub fn is_specific_node_message(&self, matches: &NodeMessageType) -> bool {
+    pub fn is_specific_node_message(&self, matches: NodeMessageType) -> bool {
         match self {
             MessageType::Client(_) => false,
-            MessageType::Node(inner) => inner == matches,
+            MessageType::Node(inner) => inner == &matches,
         }
+    }
+    
+    pub fn expect_specific_node_message(&self, matches: NodeMessageType) -> Result<(), DecodeError> {
+        if !self.is_specific_node_message(matches) {
+            Err(DecodeError::ExpectedDifferentMessageType {
+                expected: Node(matches),
+                got: *self,
+            })
+        } else { Ok(()) }
     }
 }
 

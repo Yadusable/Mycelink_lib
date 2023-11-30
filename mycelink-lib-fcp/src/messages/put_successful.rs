@@ -19,7 +19,7 @@ impl TryFrom<Message> for PutSuccessfulMessage {
 
         Ok(Self {
             identifier: value.fields().get("Identifier")?.value().try_into()?,
-            uri: value.fields().get("uri")?.value().try_into()?,
+            uri: value.fields().get("URI")?.value().try_into()?,
         })
     }
 }

@@ -1,5 +1,6 @@
 use crate::decode_error::DecodeError;
 
+#[derive(Eq, PartialEq, Debug)]
 pub struct URI {
     uri: Box<str>,
 }

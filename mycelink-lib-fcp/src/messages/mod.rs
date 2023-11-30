@@ -4,6 +4,7 @@ pub mod client_hello;
 pub mod client_put;
 pub mod generate_ssk;
 pub mod list_peer;
+pub mod data_found;
 pub mod node_hello;
 pub mod put_successful;
 pub mod skk_keypair;

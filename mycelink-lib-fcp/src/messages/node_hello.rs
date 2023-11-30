@@ -15,7 +15,9 @@ impl TryFrom<Message> for NodeHelloMessage {
     type Error = DecodeError;
 
     fn try_from(value: Message) -> Result<Self, Self::Error> {
-        value.message_type().expect_specific_node_message(NodeMessageType::NodeHello)?;
+        value
+            .message_type()
+            .expect_specific_node_message(NodeMessageType::NodeHello)?;
 
         Ok(Self {
             fcp_version: value.fields().get("FCPVersion")?.try_into()?,

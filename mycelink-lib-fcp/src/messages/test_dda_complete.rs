@@ -1,7 +1,7 @@
-use std::path::{Path, PathBuf};
 use crate::decode_error::DecodeError;
 use crate::model::message::Message;
 use crate::model::message_type_identifier::NodeMessageType;
+use std::path::{Path, PathBuf};
 
 pub struct TestDDACompleteMessage {
     pub directory: Box<Path>,

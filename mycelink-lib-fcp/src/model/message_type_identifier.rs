@@ -1,8 +1,13 @@
 use crate::decode_error::DecodeError;
 use crate::decode_error::DecodeError::UnexpectedEOF;
-use crate::model::message_type_identifier::ClientMessageType::{ClientGet, ClientHello, ClientPut, GenerateSSK, ListPeer, TestDDARequest, TestDDAResponse,};
+use crate::model::message_type_identifier::ClientMessageType::{
+    ClientGet, ClientHello, ClientPut, GenerateSSK, ListPeer, TestDDARequest, TestDDAResponse,
+};
 use crate::model::message_type_identifier::MessageType::Node;
-use crate::model::message_type_identifier::NodeMessageType::{AllData, DataFound, NodeHello, PutSuccessful, SSKKeypair, TestDDAComplete, TestDDAReply, URIGenerated};
+use crate::model::message_type_identifier::NodeMessageType::{
+    AllData, DataFound, NodeHello, PutSuccessful, SSKKeypair, TestDDAComplete, TestDDAReply,
+    URIGenerated,
+};
 use crate::peekable_reader::Peeker;
 use std::ops::Deref;
 use tokio::io::AsyncRead;

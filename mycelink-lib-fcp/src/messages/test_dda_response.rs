@@ -1,8 +1,8 @@
-use std::path::Path;
 use crate::model::fields::Field;
 use crate::model::message::Message;
 use crate::model::message_type_identifier::ClientMessageType::TestDDAResponse;
 use crate::model::message_type_identifier::MessageType;
+use std::path::Path;
 
 const MESSAGE_TYPE: MessageType = MessageType::Client(TestDDAResponse);
 

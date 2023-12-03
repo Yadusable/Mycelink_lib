@@ -1,19 +1,10 @@
 use crate::decode_error::DecodeError;
-use crate::messages::all_data::AllDataMessage;
-use crate::messages::client_get::ClientGetMessage;
-use crate::messages::client_hello::ClientHelloMessage;
-use crate::messages::client_put::ClientPutMessage;
-use crate::messages::node_hello::NodeHelloMessage;
-use crate::messages::put_successful::PutSuccessfulMessage;
-use crate::messages::uri_generated::UriGeneratedMessage;
+
 use crate::model::fields::{Fields, DATA_LIT, END_MESSAGE_LIT};
 use crate::model::message_type_identifier::MessageType;
 use crate::peekable_reader::{PeekableReader, Peeker};
 use std::ops::Deref;
 use tokio::io::AsyncRead;
-use crate::messages::skk_keypair::SKKKeypairMessage;
-use crate::messages::test_dda_complete::TestDDACompleteMessage;
-use crate::messages::test_dda_reply::TestDDAReplyMessage;
 
 pub struct Message {
     message_type: MessageType,
@@ -129,33 +120,6 @@ impl Message {
 
         todo!("Cannot recover from failed message parse yet")
     }
-}
-
-pub enum ClientMessage {
-    ClientHello(ClientHelloMessage),
-    ClientGet(ClientGetMessage),
-    ClientPut(ClientPutMessage),
-}
-
-impl From<ClientMessage> for Message {
-    fn from(value: ClientMessage) -> Self {
-        match value {
-            ClientMessage::ClientHello(inner) => inner.into(),
-            ClientMessage::ClientGet(inner) => (&inner).into(),
-            ClientMessage::ClientPut(inner) => (&inner).into(),
-
-        }
-    }
-}
-
-pub enum NodeMessage {
-    NodeHello(NodeHelloMessage),
-    AllData(AllDataMessage),
-    URIGenerated(UriGeneratedMessage),
-    PutSuccessful(PutSuccessfulMessage),
-    SKKKeypair(SKKKeypairMessage),
-    TestDDAReply(TestDDAReplyMessage),
-    TestDDAComplete(TestDDACompleteMessage)
 }
 
 pub struct MessagePayload {

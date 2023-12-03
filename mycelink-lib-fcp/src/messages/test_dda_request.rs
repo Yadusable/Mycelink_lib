@@ -18,7 +18,10 @@ impl From<TestDDARequestMessage> for Message {
             MESSAGE_TYPE,
             vec![
                 Field::new("Directory".into(), value.directory.to_string_lossy().into()),
-                Field::new("WandReadDirectory".into(), value.want_read_directory.to_string().into()),
+                Field::new(
+                    "WandReadDirectory".into(),
+                    value.want_read_directory.to_string().into(),
+                ),
                 Field::new(
                     "WantWriteDirectory".into(),
                     value.want_write_directory.to_string().into(),

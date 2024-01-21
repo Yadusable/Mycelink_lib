@@ -29,15 +29,14 @@ impl From<ClientHelloMessage> for Message {
 #[cfg(test)]
 mod tests {
     use crate::messages::client_hello::{ClientHelloMessage, EXPECTED_VERSION};
-    use crate::model::message::ClientMessage::ClientHello;
     use crate::model::message::FCPEncodable;
 
     #[test]
     fn test_encode() {
-        let client_hello = ClientHello(ClientHelloMessage {
+        let client_hello = ClientHelloMessage {
             version: EXPECTED_VERSION,
             name: "Encode-Test".into(),
-        });
+        };
 
         let encoded = client_hello.to_message().encode();
 

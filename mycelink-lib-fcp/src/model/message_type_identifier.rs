@@ -1,23 +1,46 @@
 use crate::decode_error::DecodeError;
 use crate::decode_error::DecodeError::UnexpectedEOF;
-use crate::model::message_type_identifier::ClientMessageType::{ClientGet, ClientHello};
+use crate::model::message_type_identifier::ClientMessageType::{
+    ClientGet, ClientHello, ClientPut, GenerateSSK, ListPeer, TestDDARequest, TestDDAResponse,
+};
 use crate::model::message_type_identifier::MessageType::Node;
 use crate::model::message_type_identifier::NodeMessageType::{
-    AllData, DataFound, NodeHello, PutSuccessful, URIGenerated,
+    AllData, DataFound, NodeHello, PutSuccessful, SSKKeypair, TestDDAComplete, TestDDAReply,
+    URIGenerated,
 };
 use crate::peekable_reader::Peeker;
 use std::ops::Deref;
 use tokio::io::AsyncRead;
 
-pub const CLIENT_MESSAGE_TYPES: &[ClientMessageType] = &[ClientHello, ClientGet];
-pub const NODE_MESSAGE_TYPES: &[NodeMessageType] =
-    &[NodeHello, AllData, PutSuccessful, URIGenerated, DataFound];
+pub const CLIENT_MESSAGE_TYPES: &[ClientMessageType] = &[
+    ClientHello,
+    ClientGet,
+    ClientPut,
+    ListPeer,
+    GenerateSSK,
+    TestDDARequest,
+    TestDDAResponse,
+];
+pub const NODE_MESSAGE_TYPES: &[NodeMessageType] = &[
+    NodeHello,
+    AllData,
+    PutSuccessful,
+    URIGenerated,
+    SSKKeypair,
+    TestDDAReply,
+    TestDDAComplete,
+    DataFound,
+];
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ClientMessageType {
     ClientHello,
     ClientGet,
     ClientPut,
+    ListPeer,
+    GenerateSSK,
+    TestDDARequest,
+    TestDDAResponse,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -26,6 +49,9 @@ pub enum NodeMessageType {
     AllData,
     PutSuccessful,
     URIGenerated,
+    SSKKeypair,
+    TestDDAReply,
+    TestDDAComplete,
     DataFound,
 }
 
@@ -43,6 +69,9 @@ impl NodeMessageType {
             AllData => "AllData",
             PutSuccessful => "PutSuccessful",
             URIGenerated => "URIGenerated",
+            SSKKeypair => "SSKKeypair",
+            TestDDAReply => "TestDDAReply",
+            TestDDAComplete => "TestDDAComplete",
             DataFound => "DataFound",
         }
     }
@@ -55,6 +84,10 @@ impl ClientMessageType {
             ClientHello => "ClientHello",
             ClientGet => "ClientGet",
             ClientMessageType::ClientPut => "ClientPut",
+            ClientMessageType::ListPeer => "ListPeer",
+            ClientMessageType::GenerateSSK => "GenerateSSK",
+            ClientMessageType::TestDDARequest => "TestDDARequest",
+            ClientMessageType::TestDDAResponse => "TestDDAResponse",
         }
     }
 }

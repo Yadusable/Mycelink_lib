@@ -7,7 +7,6 @@ use mycelink_lib_fcp::messages::node_hello::NodeHelloMessage;
 use mycelink_lib_fcp::messages::put_successful::PutSuccessfulMessage;
 use mycelink_lib_fcp::messages::uri_generated::UriGeneratedMessage;
 use mycelink_lib_fcp::model::fcp_version::FCPVersion;
-use mycelink_lib_fcp::model::message::ClientMessage::{ClientGet, ClientHello, ClientPut};
 use mycelink_lib_fcp::model::message::{FCPEncodable, Message};
 use mycelink_lib_fcp::model::persistence::Persistence;
 use mycelink_lib_fcp::model::priority_class::PriorityClass;
@@ -27,10 +26,10 @@ async fn integration_put_get() {
     // Handshake
     // #############################################################################################
 
-    let client_hello = ClientHello(ClientHelloMessage {
+    let client_hello = ClientHelloMessage {
         version: EXPECTED_VERSION,
         name: "Integration_test_put_get".into(),
-    });
+    };
 
     let encoded = client_hello.to_message().encode();
 
@@ -57,7 +56,7 @@ async fn integration_put_get() {
     let client_put_identifier = UniqueIdentifier::new("Put Test");
     let mut payload_bytes = [0; 128];
     rand::thread_rng().fill_bytes(&mut payload_bytes);
-    let client_put = ClientPut(ClientPutMessage {
+    let client_put = ClientPutMessage {
         uri: "CHK@".try_into().unwrap(),
         content_type: None,
         identifier: client_put_identifier.clone(),
@@ -80,7 +79,7 @@ async fn integration_put_get() {
         },
         is_binary_blob: false,
         real_time: true,
-    });
+    };
 
     let encoded = client_put.to_message().encode();
 
@@ -98,7 +97,7 @@ async fn integration_put_get() {
     // Get
     // #############################################################################################
     let client_get_identifier = UniqueIdentifier::new("Get Message");
-    let client_get_message = ClientGet(ClientGetMessage {
+    let client_get_message = ClientGetMessage {
         identifier: client_get_identifier.clone(),
         uri: generated_uri_message.uri,
         verbosity: Verbosity {
@@ -118,7 +117,7 @@ async fn integration_put_get() {
         ignore_data_store: false,
         data_store_only: false,
         real_time: false,
-    });
+    };
 
     let encoded = client_get_message.to_message().encode();
     tx.write_all(encoded.as_slice()).await.unwrap();

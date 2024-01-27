@@ -3,13 +3,13 @@ use crate::model::message::Message;
 use crate::model::message_type_identifier::NodeMessageType;
 use crate::model::unique_identifier::UniqueIdentifier;
 
-pub struct SKKKeypairMessage {
+pub struct SSKKeypairMessage {
     pub identifier: UniqueIdentifier,
     pub request_uri: Box<str>, // todo maybe replace with uri type, has to contain "freenet:"
     pub insert_uri: Box<str>,
 }
 
-impl TryFrom<Message> for SKKKeypairMessage {
+impl TryFrom<Message> for SSKKeypairMessage {
     type Error = DecodeError;
 
     fn try_from(value: Message) -> Result<Self, Self::Error> {

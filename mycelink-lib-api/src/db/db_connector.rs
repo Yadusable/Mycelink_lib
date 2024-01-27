@@ -19,4 +19,8 @@ impl DBConnector {
     fn current_schema_version(&self) -> u32 {
         todo!()
     }
+
+    pub fn has_account(&self, public_key: &str) {
+        todo!()
+    }
 }

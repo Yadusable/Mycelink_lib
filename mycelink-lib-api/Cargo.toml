@@ -6,5 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+mycelink-lib-fcp = {path = "../mycelink-lib-fcp"}
+
 rusqlite = "0.30"
 mime = "0.3"

@@ -7,7 +7,7 @@ pub mod generate_ssk;
 pub mod list_peer;
 pub mod node_hello;
 pub mod put_successful;
-pub mod skk_keypair;
+pub mod ssk_keypair;
 pub mod test_dda_complete;
 pub mod test_dda_reply;
 pub mod test_dda_request;

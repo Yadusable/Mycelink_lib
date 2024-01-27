@@ -1,6 +1,9 @@
+pub mod create_account;
+mod errors;
+
 use crate::db::db_connector::DBConnector;
 use crate::model::account::Account;
-use crate::model::chat::{Chat, ChatMetadata};
+use crate::model::chat::ChatMetadata;
 use crate::model::contact::{Contact, ContactIdentifier};
 use crate::model::media::{Media, MediaId};
 use crate::model::message::{Message, MessageId};
@@ -32,10 +35,6 @@ impl APIConnector<NotSignedIn> {
 impl<L: LoginStatus> APIConnector<L> {
     pub fn list_account_ssk_keys(&self) -> Box<[Box<str>]> {
         todo!();
-    }
-
-    pub fn create_account(&self) -> Box<str> {
-        todo!()
     }
 }
 

@@ -25,6 +25,7 @@ impl Fields {
             .iter()
             .find(|e| &*e.key == key)
             .ok_or(DecodeError::MissingField(key.into()))
+        //TODO change signature to Option?
     }
 
     pub fn get_payload_size_hint(&self) -> Result<&Field, DecodeError> {

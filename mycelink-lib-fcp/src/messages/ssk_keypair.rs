@@ -18,9 +18,13 @@ impl TryFrom<Message> for SSKKeypairMessage {
             .expect_specific_node_message(NodeMessageType::SSKKeypair)?;
 
         Ok(Self {
-            identifier: value.fields().get("Identifier")?.value().try_into()?,
-            request_uri: value.fields().get("RequestURI")?.value().into(),
-            insert_uri: value.fields().get("InsertURI")?.value().into(),
+            identifier: value
+                .fields()
+                .get_or_err("Identifier")?
+                .value()
+                .try_into()?,
+            request_uri: value.fields().get_or_err("RequestURI")?.value().into(),
+            insert_uri: value.fields().get_or_err("InsertURI")?.value().into(),
         })
     }
 }

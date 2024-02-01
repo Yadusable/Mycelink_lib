@@ -21,10 +21,14 @@ impl TryFrom<Message> for AllDataMessage {
             .expect_specific_node_message(NodeMessageType::AllData)?;
 
         Ok(Self {
-            identifier: value.fields().get("Identifier")?.value().try_into()?,
+            identifier: value
+                .fields()
+                .get_or_err("Identifier")?
+                .value()
+                .try_into()?,
             content_type: value
                 .fields()
-                .get("Metadata.ContentType")?
+                .get_or_err("Metadata.ContentType")?
                 .value()
                 .parse()?,
             data: value.payload().ok_or(DecodeError::MissingPayload)?.data,

@@ -6,6 +6,7 @@ use crate::peekable_reader::{PeekableReader, Peeker};
 use std::ops::Deref;
 use tokio::io::AsyncRead;
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Message {
     message_type: MessageType,
     fields: Fields,
@@ -122,6 +123,7 @@ impl Message {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MessagePayload {
     pub data: Vec<u8>,
     pub data_len_identifier: Box<str>,

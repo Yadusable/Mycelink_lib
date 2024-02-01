@@ -20,9 +20,13 @@ impl TryFrom<Message> for NodeHelloMessage {
             .expect_specific_node_message(NodeMessageType::NodeHello)?;
 
         Ok(Self {
-            fcp_version: value.fields().get("FCPVersion")?.try_into()?,
-            node: value.fields().get("Node")?.value().into(),
-            connection_identifier: value.fields().get("ConnectionIdentifier")?.value().into(),
+            fcp_version: value.fields().get_or_err("FCPVersion")?.try_into()?,
+            node: value.fields().get_or_err("Node")?.value().into(),
+            connection_identifier: value
+                .fields()
+                .get_or_err("ConnectionIdentifier")?
+                .value()
+                .into(),
         })
     }
 }

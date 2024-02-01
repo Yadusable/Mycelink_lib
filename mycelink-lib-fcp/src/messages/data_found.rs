@@ -19,13 +19,17 @@ impl TryFrom<Message> for DataFoundMessage {
             .expect_specific_node_message(NodeMessageType::DataFound)?;
 
         Ok(Self {
-            identifier: value.fields().get("Identifier")?.value().try_into()?,
+            identifier: value
+                .fields()
+                .get_or_err("Identifier")?
+                .value()
+                .try_into()?,
             content_type: value
                 .fields()
-                .get("Metadata.ContentType")?
+                .get_or_err("Metadata.ContentType")?
                 .value()
                 .parse()?,
-            data_length: value.fields().get("DataLength")?.value().parse()?,
+            data_length: value.fields().get_or_err("DataLength")?.value().parse()?,
         })
     }
 }

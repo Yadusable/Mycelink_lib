@@ -17,20 +17,20 @@ impl LoginStatus for NotSignedIn {}
 impl LoginStatus for SignedIn {}
 
 impl APIConnector<NotSignedIn> {
-    pub fn new(db_connector: DBConnector) -> Self {
-        Self {
-            login_status: (),
-            db_connector,
-        }
-    }
-
     pub fn open_account(&self, ssk_public_key: Box<str>) -> APIConnector<SignedIn> {
         todo!()
     }
 }
 
 impl<L: LoginStatus> APIConnector<L> {
-    pub fn list_account_ssk_keys(&self) -> Box<[Box<str>]> {
+    pub fn new(db_connector: DBConnector) -> APIConnector<NotSignedIn> {
+        Self {
+            login_status: (),
+            db_connector,
+        }
+    }
+
+    pub fn list_account_public_ssk_keys(&self) -> Box<[Box<str>]> {
         todo!();
     }
 

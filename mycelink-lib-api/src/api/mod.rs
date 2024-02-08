@@ -1,6 +1,6 @@
 use crate::db::db_connector::DBConnector;
 use crate::model::account::Account;
-use crate::model::chat::{Chat, ChatMetadata};
+use crate::model::chat::{ChatMetadata};
 use crate::model::contact::{Contact, ContactIdentifier};
 use crate::model::media::{Media, MediaId};
 use crate::model::message::{Message, MessageId};
@@ -24,7 +24,7 @@ impl APIConnector<NotSignedIn> {
 
 impl<L: LoginStatus> APIConnector<L> {
     pub fn new(db_connector: DBConnector) -> APIConnector<NotSignedIn> {
-        Self {
+        APIConnector {
             login_status: (),
             db_connector,
         }
@@ -36,6 +36,10 @@ impl<L: LoginStatus> APIConnector<L> {
 
     pub fn create_account(&self) -> Box<str> {
         todo!()
+    }
+
+    pub fn health_check(&self) -> Result<(),()> {
+        Ok(())
     }
 }
 

@@ -2,9 +2,9 @@ use crate::api::{APIConnector, LoginStatus};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-impl<L: LoginStatus> APIConnector<L> {
+impl<L: LoginStatus> APIConnector<'_, L> {
     pub async fn create_account(&self) -> Box<str> {
-        
+        todo!()
     }
 }
 
@@ -18,7 +18,10 @@ impl Display for CreateAccountErrors {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             CreateAccountErrors::AlreadyExists { public_ssk_key } => {
-                write!(f, "Account with public_ssk_key '{public_ssk_key}' already exists")
+                write!(
+                    f,
+                    "Account with public_ssk_key '{public_ssk_key}' already exists"
+                )
             }
         }
     }

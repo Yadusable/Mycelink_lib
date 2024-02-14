@@ -3,7 +3,7 @@ use crate::decode_error::DecodeError::UnexpectedEOF;
 use crate::model::message_type_identifier::ClientMessageType::{
     ClientGet, ClientHello, ClientPut, GenerateSSK, ListPeer, TestDDARequest, TestDDAResponse,
 };
-use crate::model::message_type_identifier::MessageType::Node;
+use crate::model::message_type_identifier::MessageType::{Client, Node};
 use crate::model::message_type_identifier::NodeMessageType::{
     AllData, DataFound, NodeHello, PutSuccessful, SSKKeypair, TestDDAComplete, TestDDAReply,
     URIGenerated,
@@ -83,11 +83,11 @@ impl ClientMessageType {
         match self {
             ClientHello => "ClientHello",
             ClientGet => "ClientGet",
-            ClientMessageType::ClientPut => "ClientPut",
-            ClientMessageType::ListPeer => "ListPeer",
-            ClientMessageType::GenerateSSK => "GenerateSSK",
-            ClientMessageType::TestDDARequest => "TestDDARequest",
-            ClientMessageType::TestDDAResponse => "TestDDAResponse",
+            ClientPut => "ClientPut",
+            ListPeer => "ListPeer",
+            GenerateSSK => "GenerateSSK",
+            TestDDARequest => "TestDDARequest",
+            TestDDAResponse => "TestDDAResponse",
         }
     }
 }
@@ -95,15 +95,15 @@ impl ClientMessageType {
 impl MessageType {
     pub fn name(&self) -> &'static str {
         match self {
-            MessageType::Client(inner) => inner.name(),
-            MessageType::Node(inner) => inner.name(),
+            Client(inner) => inner.name(),
+            Node(inner) => inner.name(),
         }
     }
 
     pub fn is_specific_node_message(&self, matches: NodeMessageType) -> bool {
         match self {
-            MessageType::Client(_) => false,
-            MessageType::Node(inner) => inner == &matches,
+            Client(_) => false,
+            Node(inner) => inner == &matches,
         }
     }
 

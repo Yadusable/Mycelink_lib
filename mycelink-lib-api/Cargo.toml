@@ -8,5 +8,5 @@ edition = "2021"
 [dependencies]
 mycelink-lib-fcp = {path = "../mycelink-lib-fcp"}
 
-rusqlite = "0.30"
 mime = "0.3"
+tokio = {version = "1.36", features = ["sync"] }

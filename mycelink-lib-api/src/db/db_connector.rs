@@ -1,15 +1,12 @@
-use rusqlite::Connection;
 use std::path::Path;
 
 pub struct DBConnector {
-    connection: Connection,
+    connection: (),
 }
 
 impl DBConnector {
-    pub fn new(db_path: &Path) -> Result<Self, rusqlite::Error> {
-        let connection = Connection::open(db_path)?;
-
-        Ok(Self { connection })
+    pub fn new(db_path: &Path) -> Result<Self, ()> {
+        todo!()
     }
 
     fn initial_setup(&mut self) {

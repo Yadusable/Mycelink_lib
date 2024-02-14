@@ -1,3 +1,4 @@
+use std::future::Future;
 use crate::model::message::Message;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
@@ -6,6 +7,7 @@ use crate::peekable_reader::PeekableReader;
 use tokio::io::AsyncWriteExt;
 use tokio::net::tcp::{ReadHalf, WriteHalf};
 use tokio::net::TcpStream;
+use tokio::sync::mpsc::error::SendError;
 
 pub struct FCPConnector<'stream> {
     tx: Mutex<WriteHalf<'stream>>,
@@ -59,7 +61,7 @@ impl<'stream> FCPConnector<'stream> {
             .filter(|e| !e.is_marked_for_delete())
             .find(|e| e.filter(&message));
         match listener {
-            Some(listener) => listener.action(message),
+            Some(listener) => listener.action(message).await,
             None => {
                 log::warn!("Received Message with no listener for it {message:?}")
             }
@@ -72,7 +74,7 @@ impl<'stream> FCPConnector<'stream> {
         Ok(())
     }
 
-    pub fn add_listener(&mut self, listener: Listener) {
+    pub fn add_listener(&self, listener: Listener) {
         let mut cursor = 0;
         let mut listeners = self.listeners.lock().unwrap();
         while cursor < listeners.len() && listeners[cursor].priority() < listener.priority() {
@@ -89,11 +91,10 @@ impl<'stream> FCPConnector<'stream> {
     }
 }
 
-pub type Action = dyn Fn(Message) -> bool;
 pub struct Listener {
     filters: Vec<Box<MessageFilter>>,
     priority: i8,
-    action: Box<Action>,
+    notify: tokio::sync::mpsc::Sender<Message>,
     marked_for_deletion: bool,
 }
 
@@ -103,12 +104,12 @@ impl Listener {
     pub fn new(
         filters: Vec<Box<MessageFilter>>,
         priority: i8,
-        action: impl Into<Box<Action>>,
+        notify: tokio::sync::mpsc::Sender<Message>,
     ) -> Self {
         Self {
             filters,
             priority,
-            action: action.into(),
+            notify,
             marked_for_deletion: false,
         }
     }
@@ -122,12 +123,12 @@ impl Listener {
             && self.filters.iter().filter(|e| (*e)(message)).count() == self.filters.len()
     }
 
-    pub fn action(&mut self, message: Message) {
-        self.marked_for_deletion |= (*self.action)(message)
+    pub async fn action(&mut self, message: Message) {
+        let _ = self.notify.send(message).await;
     }
 
     pub fn is_marked_for_delete(&self) -> bool {
-        self.marked_for_deletion
+        self.notify.is_closed()
     }
 }
 

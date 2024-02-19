@@ -2,7 +2,7 @@ use crate::api::{APIConnector, LoginStatus};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-impl<L: LoginStatus> APIConnector<'_, L> {
+impl<L: LoginStatus> APIConnector<L> {
     pub async fn create_account(&self) -> Box<str> {
         todo!()
     }

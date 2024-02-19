@@ -8,10 +8,10 @@ use crate::model::media::{Media, MediaId};
 use crate::model::message::{Message, MessageId};
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 
-pub struct APIConnector<'stream, L: LoginStatus> {
+pub struct APIConnector<L: LoginStatus> {
     login_status: L,
     db_connector: DBConnector,
-    fcp_connector: FCPConnector<'stream>,
+    fcp_connector: FCPConnector,
 }
 
 pub trait LoginStatus {}
@@ -20,16 +20,16 @@ type SignedIn = Account;
 impl LoginStatus for NotSignedIn {}
 impl LoginStatus for SignedIn {}
 
-impl APIConnector<'_, NotSignedIn> {
+impl APIConnector<NotSignedIn> {
     pub fn open_account(&self, ssk_public_key: Box<str>) -> APIConnector<SignedIn> {
         todo!()
     }
 }
 
-impl<'stream, L: LoginStatus> APIConnector<'stream, L> {
+impl<L: LoginStatus> APIConnector<L> {
     pub fn new(
         db_connector: DBConnector,
-        fcp_connector: FCPConnector<'stream>,
+        fcp_connector: FCPConnector,
     ) -> APIConnector<NotSignedIn> {
         APIConnector {
             login_status: (),
@@ -43,7 +43,7 @@ impl<'stream, L: LoginStatus> APIConnector<'stream, L> {
     }
 }
 
-impl APIConnector<'_, SignedIn> {
+impl APIConnector<SignedIn> {
     pub fn add_contact(&self, contact: &Contact) {
         todo!()
     }

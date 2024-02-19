@@ -1,16 +1,29 @@
+use sqlx::{migrate::MigrateDatabase, Error, Pool, Sqlite, SqliteConnection, SqlitePool};
+
 use std::path::Path;
 
 pub struct DBConnector {
-    connection: (),
+    db_pool: Pool<Sqlite>,
 }
 
 impl DBConnector {
-    pub fn new(db_path: &Path) -> Result<Self, ()> {
-        todo!()
+    pub async fn new(db_path: &str) -> Result<Self, sqlx::Error> {
+        let db_url: &str = db_path;
+        let db_pool = SqlitePool::connect(db_url).await.unwrap();
+        Ok(Self { db_pool })
     }
 
-    fn initial_setup(&mut self) {
-        todo!()
+    pub async fn initial_setup(db_path: &str) {
+        let db_url: &str = db_path;
+        if !Sqlite::database_exists(db_url).await.unwrap_or(false) {
+            println!("Creating database {}", db_url);
+            match Sqlite::create_database(db_url).await {
+                Ok(_) => println!("Create db success"),
+                Err(error) => panic!("error: {}", error),
+            }
+        } else {
+            println!("Database already exists");
+        }
     }
 
     fn current_schema_version(&self) -> u32 {
@@ -20,4 +33,11 @@ impl DBConnector {
     pub fn has_account(&self, public_key: &str) {
         todo!()
     }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[tokio::test]
+    async fn run_something() {}
 }

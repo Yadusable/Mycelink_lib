@@ -38,8 +38,16 @@ impl<L: LoginStatus> APIConnector<L> {
         }
     }
 
+    pub fn list_account_public_ssk_keys(&self) -> Box<[Box<str>]> {
+        todo!();
+    }
+
     pub fn list_account_ssk_keys(&self) -> Box<[Box<str>]> {
         todo!();
+    }
+
+    pub fn health_check(&self) -> Result<(), ()> {
+        Ok(())
     }
 }
 

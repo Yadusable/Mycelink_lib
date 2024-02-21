@@ -1,3 +1,7 @@
+CREATE TABLE database_metadata (
+    schema_version INT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS chat_ids
 (
     id  BLOB(16)            PRIMARY KEY,

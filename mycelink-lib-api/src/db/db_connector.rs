@@ -1,21 +1,34 @@
 use crate::db::schema_updater::update_to_newest_version;
+use crate::model::tenant::Tenant;
 use sqlx::sqlite::SqliteConnectOptions;
-use sqlx::{Executor, Pool, Row, Sqlite, SqlitePool};
+use sqlx::{Executor, Pool, Row, Sqlite, SqlitePool, Transaction};
+
+#[cfg(test)]
+use sqlx::sqlite::SqlitePoolOptions;
 
 pub type DatabaseBackend = Sqlite;
 
-pub struct DBConnector {
-    db_pool: Pool<Sqlite>,
+pub struct DBConnector<T: TenantState> {
+    pool: Pool<Sqlite>,
+    tenant: T,
 }
 
-impl DBConnector {
-    pub async fn new(db_path: &str) -> Result<Self, sqlx::Error> {
-        let db_pool = Self::connect(db_path).await?;
+pub trait TenantState {}
 
-        let current_schema_version = Self::current_schema_version(&db_pool).await?;
-        update_to_newest_version(current_schema_version, &db_pool).await?;
+pub type NoTenant = ();
 
-        Ok(Self { db_pool })
+impl TenantState for NoTenant {}
+
+impl TenantState for Tenant {}
+
+impl DBConnector<NoTenant> {
+    pub async fn new(db_path: &str) -> Result<DBConnector<NoTenant>, sqlx::Error> {
+        let pool = Self::connect(db_path).await?;
+
+        let current_schema_version = Self::current_schema_version(&pool).await?;
+        update_to_newest_version(current_schema_version, &pool).await?;
+
+        Ok(DBConnector { pool, tenant: () })
     }
 
     async fn connect(uri: &str) -> Result<Pool<DatabaseBackend>, sqlx::Error> {
@@ -34,9 +47,50 @@ impl DBConnector {
 
         Ok(res.map(|row| row.get::<u32, _>(0)).unwrap_or(0))
     }
+}
 
-    pub fn has_account(&self, public_key: &str) {
-        todo!()
+impl<T: TenantState> DBConnector<T> {
+    pub async fn begin(&self) -> Result<Transaction<DatabaseBackend>, sqlx::Error> {
+        self.pool.begin().await
+    }
+}
+
+impl DBConnector<Tenant> {
+    pub fn tenant(&self) -> &Tenant {
+        &self.tenant
+    }
+}
+#[cfg(test)]
+impl DBConnector<NoTenant> {
+    pub async fn new_testing() -> DBConnector<NoTenant> {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .idle_timeout(None)
+            .max_lifetime(None)
+            .connect("sqlite://")
+            .await
+            .unwrap();
+
+        let current_schema_version = Self::current_schema_version(&pool).await.unwrap();
+        update_to_newest_version(current_schema_version, &pool)
+            .await
+            .unwrap();
+
+        DBConnector { pool, tenant: () }
+    }
+}
+
+#[cfg(test)]
+impl DBConnector<NoTenant> {
+    pub async fn test_tenant(self) -> DBConnector<Tenant> {
+        let mut tx = self.begin().await.unwrap();
+        let tenant = self.create_tenant(&mut tx, "Test Tenant").await.unwrap();
+        tx.commit().await.unwrap();
+
+        DBConnector {
+            pool: self.pool,
+            tenant,
+        }
     }
 }
 
@@ -82,7 +136,7 @@ mod tests {
         let connector = DBConnector::new(path.to_str().unwrap()).await.unwrap();
 
         assert!(
-            DBConnector::current_schema_version(&connector.db_pool)
+            DBConnector::current_schema_version(&connector.pool)
                 .await
                 .unwrap()
                 > 0

@@ -6,21 +6,18 @@ use mycelink_lib_fcp::model::message_type_identifier::NodeMessageType;
 use mycelink_lib_fcp::model::unique_identifier::UniqueIdentifier;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use tokio::sync::mpsc;
 
 pub async fn generate_ssk(
     fcp_connector: &FCPConnector,
 ) -> Result<SSKKeypairMessage, GenerateSSKKeypairError> {
     let identifier = UniqueIdentifier::new("generate_ssk");
 
-    let (notifier, mut waiter) = mpsc::channel(1);
-    let listener = Listener::new(
+    let (listener, mut receiver) = Listener::new(
         vec![
             filters::identity_filter(identifier.clone()),
             filters::type_filter(NodeMessageType::SSKKeypair),
         ],
         Listener::DEFAULT_PRIORITY,
-        notifier,
     );
 
     fcp_connector.add_listener(listener).await;
@@ -28,7 +25,7 @@ pub async fn generate_ssk(
     let generate_message = GenerateSSKMessage { identifier };
     fcp_connector.send(generate_message).await?;
 
-    match waiter.recv().await {
+    match receiver.recv().await {
         None => Err(GenerateSSKKeypairError::Internal()),
         Some(message) => Ok(message.try_into()?),
     }
@@ -74,24 +71,15 @@ impl From<DecodeError> for GenerateSSKKeypairError {
 #[cfg(test)]
 mod tests {
     use crate::fcp_tools::generate_ssk::generate_ssk;
-    use mycelink_lib_fcp::fcp_connector::FCPConnector;
+    use crate::test::create_test_fcp_connector;
     use std::sync::Arc;
-    use tokio::net::TcpStream;
 
     #[tokio::test]
     pub async fn test_generate_ssk() {
-        let _ = env_logger::try_init();
-
-        let stream = TcpStream::connect("localhost:9481").await.unwrap();
-        let connector = Arc::new(
-            FCPConnector::new(stream, "generate ssk test")
-                .await
-                .unwrap(),
-        );
-        let listen_connector = connector.clone();
-
-        let _handle = tokio::spawn(async move { listen_connector.listen().await });
+        let connector =
+            Arc::new(create_test_fcp_connector("generate_ssk::test_generate_ssk").await);
 
         let keypair = generate_ssk(&connector).await.unwrap();
+        assert_ne!(keypair.request_uri, keypair.insert_uri);
     }
 }

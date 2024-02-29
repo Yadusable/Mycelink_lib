@@ -8,6 +8,7 @@ use std::sync::Mutex;
 use tokio::io::AsyncWriteExt;
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::TcpStream;
+use tokio::sync::mpsc::channel;
 
 pub struct FCPConnector {
     tx: Mutex<OwnedWriteHalf>,
@@ -98,6 +99,7 @@ impl FCPConnector {
 
     pub async fn send(&self, message: impl Into<Message>) -> Result<(), tokio::io::Error> {
         let message = message.into();
+        log::debug!("Send Message {message:?}");
         let bytes = message.encode();
         let mut tx = self.tx.lock().unwrap();
         tx.write_all(bytes.as_slice()).await
@@ -117,14 +119,17 @@ impl Listener {
     pub fn new(
         filters: Vec<Box<MessageFilter>>,
         priority: i8,
-        notify: tokio::sync::mpsc::Sender<Message>,
-    ) -> Self {
-        Self {
-            filters,
-            priority,
-            notify,
-            marked_for_deletion: false,
-        }
+    ) -> (Self, tokio::sync::mpsc::Receiver<Message>) {
+        let (notify, receiver) = channel(2);
+        (
+            Self {
+                filters,
+                priority,
+                notify,
+                marked_for_deletion: false,
+            },
+            receiver,
+        )
     }
 
     pub fn priority(&self) -> i8 {

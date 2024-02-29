@@ -2,7 +2,7 @@ use crate::model::message_type_identifier::MessageType;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::num::ParseIntError;
-use std::str::Utf8Error;
+use std::str::{ParseBoolError, Utf8Error};
 
 #[derive(Debug)]
 pub enum DecodeError {
@@ -82,5 +82,11 @@ impl From<ParseIntError> for DecodeError {
         DecodeError::ParseError(
             format!("Failed to parse integer (kind: {:?})", value.kind()).into(),
         )
+    }
+}
+
+impl From<ParseBoolError> for DecodeError {
+    fn from(value: ParseBoolError) -> Self {
+        DecodeError::ParseError(format!("Failed to parse bool (kind: {:?}", value).into())
     }
 }

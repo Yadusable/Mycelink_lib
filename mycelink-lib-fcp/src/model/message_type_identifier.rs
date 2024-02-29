@@ -5,8 +5,8 @@ use crate::model::message_type_identifier::ClientMessageType::{
 };
 use crate::model::message_type_identifier::MessageType::{Client, Node};
 use crate::model::message_type_identifier::NodeMessageType::{
-    AllData, DataFound, NodeHello, PutSuccessful, SSKKeypair, TestDDAComplete, TestDDAReply,
-    URIGenerated,
+    AllData, DataFound, GetFailed, NodeHello, ProtocolError, PutFailed, PutSuccessful, SSKKeypair,
+    TestDDAComplete, TestDDAReply, URIGenerated,
 };
 use crate::peekable_reader::Peeker;
 use std::ops::Deref;
@@ -25,11 +25,14 @@ pub const NODE_MESSAGE_TYPES: &[NodeMessageType] = &[
     NodeHello,
     AllData,
     PutSuccessful,
+    PutFailed,
+    GetFailed,
     URIGenerated,
     SSKKeypair,
     TestDDAReply,
     TestDDAComplete,
     DataFound,
+    ProtocolError,
 ];
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -48,11 +51,14 @@ pub enum NodeMessageType {
     NodeHello,
     AllData,
     PutSuccessful,
+    PutFailed,
+    GetFailed,
     URIGenerated,
     SSKKeypair,
     TestDDAReply,
     TestDDAComplete,
     DataFound,
+    ProtocolError,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -73,6 +79,9 @@ impl NodeMessageType {
             TestDDAReply => "TestDDAReply",
             TestDDAComplete => "TestDDAComplete",
             DataFound => "DataFound",
+            PutFailed => "PutFailed",
+            GetFailed => "GetFailed",
+            ProtocolError => "ProtocolError",
         }
     }
 }

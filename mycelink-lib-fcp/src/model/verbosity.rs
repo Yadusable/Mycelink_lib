@@ -8,7 +8,7 @@ const EXPECTED_HASH: Bitmask = 1 << 3;
 const EXPECTED_MIME: Bitmask = 1 << 5;
 const EXPECTED_DATA_LENGTH: Bitmask = 1 << 6;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Default)]
 pub struct Verbosity {
     pub simple_progress: bool,
     pub sending_to_network: bool,

@@ -1,11 +1,11 @@
-pub mod create_account;
+pub mod mycelink_create_account;
 
 use crate::db::db_connector::{DBConnector, NoTenant, TenantState};
-use crate::model::account::Account;
 use crate::model::chat::ChatMetadata;
-use crate::model::contact::{Contact, ContactIdentifier};
+use crate::model::contact::ContactId;
 use crate::model::media::{Media, MediaId};
 use crate::model::message::Message;
+use crate::model::mycelink_account::MycelinkAccount;
 use crate::model::tenant::Tenant;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 
@@ -18,14 +18,14 @@ pub struct APIConnector<L: LoginStatus, T: TenantState> {
 pub trait LoginStatus {}
 
 type NotSignedIn = ();
-type SignedIn = Account;
+type SignedIn = MycelinkAccount;
 
 impl LoginStatus for NotSignedIn {}
 
 impl LoginStatus for SignedIn {}
 
 impl APIConnector<NotSignedIn, Tenant> {
-    pub fn open_account(&self, ssk_public_key: Box<str>) -> APIConnector<SignedIn, Tenant> {
+    pub fn open_mycelink_account(&self) -> APIConnector<SignedIn, Tenant> {
         todo!()
     }
 }
@@ -62,11 +62,15 @@ impl<L: LoginStatus, T: TenantState> APIConnector<L, T> {
 }
 
 impl APIConnector<SignedIn, Tenant> {
-    pub fn add_contact(&self, contact: &Contact) {
+    pub fn add_mycelink_contact(
+        &self,
+        account_info_request_key: &str,
+        display_name: impl Into<Box<str>>,
+    ) {
         todo!()
     }
 
-    pub fn friend_request(&self, contact_identifier: &ContactIdentifier) {
+    pub fn mycelink_friend_request(&self, contact_identifier: &ContactId) {
         todo!()
     }
 

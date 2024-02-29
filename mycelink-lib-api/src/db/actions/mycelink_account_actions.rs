@@ -1,5 +1,5 @@
 use crate::db::db_connector::{DBConnector, DatabaseBackend};
-use crate::model::account::Account;
+use crate::model::mycelink_account::MycelinkAccount;
 use crate::model::tenant::Tenant;
 use sqlx::{Row, Transaction};
 use std::error::Error;
@@ -9,7 +9,7 @@ impl DBConnector<Tenant> {
     pub async fn create_mycelink_account_entry(
         &self,
         tx: &mut Transaction<'_, DatabaseBackend>,
-        account: &Account,
+        account: &MycelinkAccount,
     ) -> Result<(), MycelinkAccountEntryError> {
         if self.get_mycelink_account(tx).await?.is_some() {
             return Err(MycelinkAccountEntryError::AccountAlreadyExists);
@@ -33,7 +33,7 @@ impl DBConnector<Tenant> {
     pub async fn get_mycelink_account(
         &self,
         tx: &mut Transaction<'_, DatabaseBackend>,
-    ) -> Result<Option<Account>, MycelinkAccountEntryError> {
+    ) -> Result<Option<MycelinkAccount>, MycelinkAccountEntryError> {
         let query = sqlx::query("SELECT (config) FROM protocol_config_per_tenant WHERE protocol = 'mycelink' AND tenant = ?");
         let res = query
             .bind(self.tenant().display_name())
@@ -43,7 +43,7 @@ impl DBConnector<Tenant> {
         if let Some(row) = res {
             let config: Box<str> = row.try_get("config")?;
 
-            let account: Account = serde_json::from_str(&config)?;
+            let account: MycelinkAccount = serde_json::from_str(&config)?;
             Ok(Some(account))
         } else {
             Ok(None)
@@ -87,8 +87,7 @@ impl From<serde_json::Error> for MycelinkAccountEntryError {
 #[cfg(test)]
 mod tests {
     use crate::db::db_connector::DBConnector;
-    use crate::model::account::Account;
-    use crate::model::tenant::Tenant;
+    use crate::model::mycelink_account::MycelinkAccount;
 
     #[tokio::test]
     async fn get_nonexistent_account() {
@@ -104,7 +103,8 @@ mod tests {
         let connector = DBConnector::new_testing().await.test_tenant().await;
         let mut tx = connector.begin().await.unwrap();
 
-        let account = Account::create_new("dummy request key".into(), "dummy insert key".into());
+        let account =
+            MycelinkAccount::create_new("dummy request key".into(), "dummy insert key".into());
 
         connector
             .create_mycelink_account_entry(&mut tx, &account)

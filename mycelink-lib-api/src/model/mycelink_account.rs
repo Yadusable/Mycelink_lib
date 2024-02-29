@@ -1,12 +1,12 @@
 use crate::model::asymmetric_keys::{
     PrivateEncryptionKey, PrivateSigningKey, PublicEncryptionKey, PublicSigningKey,
 };
-use crate::model::contact::{Contact, ContactIdentifier};
+use crate::model::connection_details::PublicMycelinkConnectionDetails;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct Account {
+pub struct MycelinkAccount {
     request_ssk_key: Box<str>,
     insert_ssk_key: Box<str>,
 
@@ -17,7 +17,7 @@ pub struct Account {
     private_signing_key: PrivateSigningKey,
 }
 
-impl Account {
+impl MycelinkAccount {
     pub fn request_ssk_key(&self) -> &str {
         &self.request_ssk_key
     }
@@ -70,9 +70,12 @@ impl Account {
         )
     }
 
-    pub fn generate_contact_info(&self, display_name: impl Into<Box<str>>) -> Contact {
-        Contact::new(
-            ContactIdentifier::new(&*self.request_ssk_key),
+    pub fn generate_contact_info(
+        &self,
+        display_name: impl Into<Box<str>>,
+    ) -> PublicMycelinkConnectionDetails {
+        PublicMycelinkConnectionDetails::new(
+            self.request_ssk_key.clone(),
             display_name,
             self.public_signing_key.clone(),
             self.public_encryption_key.clone(),

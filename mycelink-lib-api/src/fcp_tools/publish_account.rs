@@ -1,5 +1,5 @@
 use crate::fcp_tools::fcp_put::{fcp_put_inline, FcpPutError};
-use crate::model::account::Account;
+use crate::model::mycelink_account::MycelinkAccount;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use mycelink_lib_fcp::model::uri::URI;
 use std::error::Error;
@@ -7,7 +7,7 @@ use std::fmt::{Display, Formatter};
 
 pub async fn publish_account(
     fcp_connector: &FCPConnector,
-    account: &Account,
+    account: &MycelinkAccount,
     display_name: impl Into<Box<str>>,
 ) -> Result<(), PublishAccountError> {
     let uri: URI = account.insert_ssk_key().try_into().unwrap();
@@ -50,7 +50,7 @@ mod tests {
     use crate::fcp_tools::fcp_get::fcp_get_inline;
     use crate::fcp_tools::generate_ssk::generate_ssk;
     use crate::fcp_tools::publish_account::publish_account;
-    use crate::model::account::Account;
+    use crate::model::mycelink_account::MycelinkAccount;
     use crate::test::create_test_fcp_connector;
     use mycelink_lib_fcp::model::priority_class::PriorityClass;
 
@@ -60,7 +60,7 @@ mod tests {
             create_test_fcp_connector("publish_account::test_upload_download").await;
 
         let ssk_key = generate_ssk(&fcp_connector).await.unwrap();
-        let account = Account::create_new(ssk_key.request_uri, ssk_key.insert_uri);
+        let account = MycelinkAccount::create_new(ssk_key.request_uri, ssk_key.insert_uri);
 
         publish_account(&fcp_connector, &account, "Test Account")
             .await

@@ -1,2 +1,2 @@
-pub mod account_actions;
+pub mod mycelink_account_actions;
 pub mod tenant_actions;

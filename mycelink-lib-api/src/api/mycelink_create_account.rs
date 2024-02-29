@@ -1,20 +1,20 @@
 use crate::api::{APIConnector, LoginStatus};
-use crate::db::actions::account_actions::MycelinkAccountEntryError;
+use crate::db::actions::mycelink_account_actions::MycelinkAccountEntryError;
 use crate::fcp_tools::generate_ssk::{generate_ssk, GenerateSSKKeypairError};
 use crate::fcp_tools::publish_account::{publish_account, PublishAccountError};
-use crate::model::account::Account;
+use crate::model::mycelink_account::MycelinkAccount;
 use crate::model::tenant::Tenant;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
 impl<L: LoginStatus> APIConnector<L, Tenant> {
-    pub async fn create_account(
+    pub async fn create_mycelink_account(
         &self,
         display_name: impl Into<Box<str>>,
     ) -> Result<Box<str>, CreateAccountError> {
         let ssk_key = generate_ssk(&self.fcp_connector).await?;
 
-        let account = Account::create_new(ssk_key.request_uri, ssk_key.insert_uri);
+        let account = MycelinkAccount::create_new(ssk_key.request_uri, ssk_key.insert_uri);
 
         let mut tx = self.db_connector.begin().await?;
         self.db_connector

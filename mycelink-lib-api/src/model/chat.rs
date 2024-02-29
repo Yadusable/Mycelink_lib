@@ -1,5 +1,11 @@
-use crate::model::contact::ContactIdentifier;
+use crate::model::connection_details::PublicMycelinkConnectionDetails;
 
 pub enum ChatMetadata {
-    DirectChat { recipient: ContactIdentifier },
+    Mycelink { inner: MycelinkChatMetadata },
+}
+
+pub enum MycelinkChatMetadata {
+    DirectChat {
+        recipent: PublicMycelinkConnectionDetails,
+    },
 }

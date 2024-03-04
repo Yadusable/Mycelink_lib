@@ -42,6 +42,8 @@ impl From<&ClientGetMessage> for Message {
             ),
             Field::new("DSonly".into(), value.data_store_only.to_string().into()),
             Field::new("RealTimeFlag".into(), value.real_time.to_string().into()),
+            #[cfg(feature = "local_only")]
+            Field::new("DSonly".into(), true.to_string().into()),
         ];
 
         if let ReturnType::Disk { path } = &value.return_type {

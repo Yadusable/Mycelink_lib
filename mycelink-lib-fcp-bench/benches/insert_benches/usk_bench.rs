@@ -21,7 +21,16 @@ pub fn usk_bench(c: &mut Criterion) {
                 .build()
                 .unwrap(),
         )
-        .iter(|| usk_bench_initial_fn());
+        .iter(usk_bench_initial_fn);
+    })
+    .bench_function("usk_update_bench", |b| {
+        b.to_async(
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap(),
+        )
+        .iter(usk_bench_update)
     });
 }
 
@@ -39,6 +48,37 @@ async fn usk_bench_initial_fn() {
         uri: insert_uri.as_str().try_into().unwrap(),
         content_type: None,
         identifier: UniqueIdentifier::new("Bench insert USK"),
+        verbosity: Default::default(),
+        max_retries: 0,
+        priority: PriorityClass::High,
+        get_only_chk: false,
+        dont_compress: true,
+        persistence: Persistence::Connection,
+        target_filename: None,
+        upload_from: Direct { data: data.into() },
+        is_binary_blob: false,
+        real_time: true,
+    };
+
+    let encoded = (&put_message).to_message().encode();
+    tx.write_all(encoded.as_slice()).await.unwrap();
+
+    let _uri_updated: UriGeneratedMessage =
+        Message::decode(&mut rx).await.unwrap().try_into().unwrap();
+
+    let _put_successful: PutSuccessfulMessage =
+        Message::decode(&mut rx).await.unwrap().try_into().unwrap();
+}
+
+async fn usk_bench_update() {
+    let mut data: [u8; 1024] = [0; 1024];
+    rand::thread_rng().fill_bytes(&mut data);
+    let (mut tx, mut rx) = prepare_connection().await;
+
+    let put_message = ClientPutMessage {
+        uri: "SSK@YF37t7m2S2aVAYBoomELV84PXW15EWcwAdW~VM1Oo0s,B8t0sp0h4OTl0aztQSoozEMXYQlirFfJynqFT3XEH3U,AQECAAE/tests/0".try_into().unwrap(),
+        content_type: None,
+        identifier: UniqueIdentifier::new("Bench update USK"),
         verbosity: Default::default(),
         max_retries: 0,
         priority: PriorityClass::High,

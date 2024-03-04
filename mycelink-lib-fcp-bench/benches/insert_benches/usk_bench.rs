@@ -4,12 +4,12 @@ use criterion::Criterion;
 use mycelink_lib_fcp::messages::client_put::ClientPutMessage;
 use mycelink_lib_fcp::messages::put_successful::PutSuccessfulMessage;
 use mycelink_lib_fcp::messages::uri_generated::UriGeneratedMessage;
-use mycelink_lib_fcp::model::message::{FCPEncodable, Message};
+use mycelink_lib_fcp::model::message::FCPEncodable;
 use mycelink_lib_fcp::model::persistence::Persistence;
 use mycelink_lib_fcp::model::priority_class::PriorityClass;
 use mycelink_lib_fcp::model::unique_identifier::UniqueIdentifier;
 use mycelink_lib_fcp::model::upload_type::UploadType::Direct;
-use mycelink_lib_fcp_bench::fcp_helper::{generate_ssk, prepare_connection};
+use mycelink_lib_fcp_bench::fcp_helper::{generate_ssk, prepare_connection, receive_message};
 use rand::RngCore;
 use tokio::io::AsyncWriteExt;
 
@@ -63,11 +63,9 @@ async fn usk_bench_initial_fn() {
     let encoded = (&put_message).to_message().encode();
     tx.write_all(encoded.as_slice()).await.unwrap();
 
-    let _uri_updated: UriGeneratedMessage =
-        Message::decode(&mut rx).await.unwrap().try_into().unwrap();
+    let _uri_updated: UriGeneratedMessage = receive_message(&mut rx).await.try_into().unwrap();
 
-    let _put_successful: PutSuccessfulMessage =
-        Message::decode(&mut rx).await.unwrap().try_into().unwrap();
+    let _put_successful: PutSuccessfulMessage = receive_message(&mut rx).await.try_into().unwrap();
 }
 
 async fn usk_bench_update() {
@@ -94,9 +92,7 @@ async fn usk_bench_update() {
     let encoded = (&put_message).to_message().encode();
     tx.write_all(encoded.as_slice()).await.unwrap();
 
-    let _uri_updated: UriGeneratedMessage =
-        Message::decode(&mut rx).await.unwrap().try_into().unwrap();
+    let _uri_updated: UriGeneratedMessage = receive_message(&mut rx).await.try_into().unwrap();
 
-    let _put_successful: PutSuccessfulMessage =
-        Message::decode(&mut rx).await.unwrap().try_into().unwrap();
+    let _put_successful: PutSuccessfulMessage = receive_message(&mut rx).await.try_into().unwrap();
 }

@@ -46,3 +46,9 @@ pub async fn generate_ssk(
 
     Message::decode(rx).await.unwrap().try_into().unwrap()
 }
+
+pub async fn receive_message(rx: &mut PeekableReader<impl AsyncRead + Unpin>) -> Message {
+    let message = Message::decode(rx).await.unwrap();
+    println!("Received Message {:?}", message);
+    message
+}

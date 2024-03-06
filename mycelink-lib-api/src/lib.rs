@@ -1,4 +1,5 @@
 pub mod api;
+mod crypto;
 pub mod db;
 mod fcp_tools;
 mod model;

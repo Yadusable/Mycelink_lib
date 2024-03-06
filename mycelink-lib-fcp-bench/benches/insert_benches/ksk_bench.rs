@@ -31,6 +31,7 @@ async fn ksk_bench_initial_fn() {
     let (mut tx, mut rx) = prepare_connection().await;
 
     let put_message = ClientPutMessage {
+        early_encode: false,
         uri: "KSK@my_littel_benchmark_age".try_into().unwrap(),
         content_type: None,
         identifier: UniqueIdentifier::new("Bench insert USK"),

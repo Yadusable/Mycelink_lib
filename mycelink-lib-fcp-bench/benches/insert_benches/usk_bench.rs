@@ -45,6 +45,7 @@ async fn usk_bench_initial_fn() {
     insert_uri.push_str("test/0");
 
     let put_message = ClientPutMessage {
+        early_encode: true,
         uri: insert_uri.as_str().try_into().unwrap(),
         content_type: None,
         identifier: UniqueIdentifier::new("Bench insert USK"),
@@ -57,7 +58,7 @@ async fn usk_bench_initial_fn() {
         target_filename: None,
         upload_from: Direct { data: data.into() },
         is_binary_blob: false,
-        real_time: true,
+        real_time: false,
     };
 
     let encoded = (&put_message).to_message().encode();
@@ -74,7 +75,8 @@ async fn usk_bench_update() {
     let (mut tx, mut rx) = prepare_connection().await;
 
     let put_message = ClientPutMessage {
-        uri: "SSK@YF37t7m2S2aVAYBoomELV84PXW15EWcwAdW~VM1Oo0s,B8t0sp0h4OTl0aztQSoozEMXYQlirFfJynqFT3XEH3U,AQECAAE/tests/0".try_into().unwrap(),
+        early_encode: true,
+        uri: "USK@YF37t7m2S2aVAYBoomELV84PXW15EWcwAdW~VM1Oo0s,B8t0sp0h4OTl0aztQSoozEMXYQlirFfJynqFT3XEH3U,AQECAAE/tests/0".try_into().unwrap(),
         content_type: None,
         identifier: UniqueIdentifier::new("Bench update USK"),
         verbosity: Default::default(),

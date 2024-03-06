@@ -34,6 +34,7 @@ async fn ssk_bench_initial_fn() {
     let keypair = generate_ssk(&mut tx, &mut rx).await;
 
     let put_message = ClientPutMessage {
+        early_encode: false,
         uri: keypair.insert_uri.deref().try_into().unwrap(),
         content_type: None,
         identifier: UniqueIdentifier::new("Bench insert SSK"),

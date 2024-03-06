@@ -1,17 +1,31 @@
+use mycelink_lib_fcp::messages::client_get::ClientGetMessage;
 use mycelink_lib_fcp::messages::client_hello::ClientHelloMessage;
+use mycelink_lib_fcp::messages::client_put::ClientPutMessage;
 use mycelink_lib_fcp::messages::generate_ssk::GenerateSSKMessage;
 use mycelink_lib_fcp::messages::node_hello::NodeHelloMessage;
 use mycelink_lib_fcp::messages::ssk_keypair::SSKKeypairMessage;
 use mycelink_lib_fcp::model::fcp_version::FCPVersion;
 use mycelink_lib_fcp::model::message::{FCPEncodable, Message};
+use mycelink_lib_fcp::model::message_type_identifier::{MessageType, NodeMessageType};
+use mycelink_lib_fcp::model::persistence::Persistence;
+use mycelink_lib_fcp::model::priority_class::PriorityClass;
+use mycelink_lib_fcp::model::return_type::ReturnType;
 use mycelink_lib_fcp::model::unique_identifier::UniqueIdentifier;
+use mycelink_lib_fcp::model::uri::URI;
 use mycelink_lib_fcp::peekable_reader::PeekableReader;
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::TcpStream;
 
-pub async fn prepare_connection() -> (OwnedWriteHalf, PeekableReader<BufReader<OwnedReadHalf>>) {
-    let mut stream = TcpStream::connect("localhost:9481").await.unwrap();
+pub const FCP_PORT_1: u16 = 9481;
+pub const FCP_PORT_2: u16 = 9482;
+
+pub async fn prepare_connection(
+    port: u16,
+) -> (OwnedWriteHalf, PeekableReader<BufReader<OwnedReadHalf>>) {
+    let mut stream = TcpStream::connect(format!("localhost:{port}"))
+        .await
+        .unwrap();
 
     let client_hello = ClientHelloMessage {
         name: "benches".to_string().into(),
@@ -51,4 +65,65 @@ pub async fn receive_message(rx: &mut PeekableReader<impl AsyncRead + Unpin>) ->
     let message = Message::decode(rx).await.unwrap();
     println!("Received Message {:?}", message);
     message
+}
+
+pub async fn measure_put_time(put_message: ClientPutMessage, receive_uri: URI) {
+    let mut conn_1 = prepare_connection(FCP_PORT_1).await;
+    let mut conn_2 = prepare_connection(FCP_PORT_2).await;
+
+    conn_1
+        .0
+        .write_all((&put_message).to_message().encode().as_slice())
+        .await
+        .unwrap();
+
+    let get = ClientGetMessage {
+        identifier: UniqueIdentifier::new("Measure Put"),
+        uri: receive_uri,
+        verbosity: Default::default(),
+        return_type: ReturnType::Direct,
+        max_size: None,
+        max_temp_size: None,
+        max_retries: 0,
+        priority: PriorityClass::High,
+        persistence: Persistence::Connection,
+        ignore_data_store: true,
+        data_store_only: false,
+        real_time: true,
+    };
+
+    conn_2
+        .0
+        .write_all((&get).to_message().encode().as_slice())
+        .await
+        .unwrap();
+
+    loop {
+        let message;
+        tokio::select! {
+            e = receive_message(&mut conn_1.1) => message = e,
+            e = receive_message(&mut conn_2.1) => message = e,
+        }
+
+        match message.message_type() {
+            MessageType::Client(_) => {
+                panic!()
+            }
+            MessageType::Node(message) => match message {
+                NodeMessageType::AllData => {}
+                NodeMessageType::PutSuccessful => {}
+                NodeMessageType::PutFailed => {
+                    panic!("Received PutFailed")
+                }
+                NodeMessageType::GetFailed => {
+                    panic!("Received GetFailed")
+                }
+                NodeMessageType::URIGenerated => {}
+                NodeMessageType::DataFound => {
+                    break;
+                }
+                invalid_type => panic!("Received unexpected message Type {invalid_type}"),
+            },
+        }
+    }
 }

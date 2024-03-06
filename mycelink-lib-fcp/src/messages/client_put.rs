@@ -13,6 +13,7 @@ use crate::model::verbosity::Verbosity;
 pub struct ClientPutMessage {
     pub uri: URI,
     pub content_type: Option<ContentType>,
+    pub early_encode: bool,
     pub identifier: UniqueIdentifier,
     pub verbosity: Verbosity,
     pub max_retries: i32,
@@ -43,6 +44,7 @@ impl From<&ClientPutMessage> for Message {
             Field::new("UploadFrom".into(), (&value.upload_from).into()),
             Field::new("BinaryBlob".into(), value.is_binary_blob.to_string().into()),
             Field::new("RealTimeFlag".into(), value.real_time.to_string().into()),
+            Field::new("EarlyEncode".into(), value.early_encode.to_string().into()),
             #[cfg(feature = "local_only")]
             Field::new("LocalRequestOnly".into(), true.to_string().into()),
         ];

@@ -11,6 +11,7 @@ use crate::model::message_type_identifier::NodeMessageType::{
     TestDDAComplete, TestDDAReply, URIGenerated,
 };
 use crate::peekable_reader::Peeker;
+use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 use tokio::io::AsyncRead;
 
@@ -102,6 +103,12 @@ impl NodeMessageType {
     }
 }
 
+impl Display for NodeMessageType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name())
+    }
+}
+
 impl ClientMessageType {
     /// Gets the str representing the MessageIdentifier (e.g. "ClientHello")
     pub fn name(&self) -> &'static str {
@@ -115,6 +122,12 @@ impl ClientMessageType {
             TestDDAResponse => "TestDDAResponse",
             SubscribeUSK => "SubscribeUSK",
         }
+    }
+}
+
+impl Display for ClientMessageType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name())
     }
 }
 

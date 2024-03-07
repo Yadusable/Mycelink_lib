@@ -2,16 +2,15 @@
 
 use criterion::Criterion;
 use mycelink_lib_fcp::messages::client_put::ClientPutMessage;
-use mycelink_lib_fcp::messages::put_successful::PutSuccessfulMessage;
-use mycelink_lib_fcp::messages::uri_generated::UriGeneratedMessage;
-use mycelink_lib_fcp::model::message::FCPEncodable;
+use std::time::UNIX_EPOCH;
+
 use mycelink_lib_fcp::model::persistence::Persistence;
 use mycelink_lib_fcp::model::priority_class::PriorityClass;
 use mycelink_lib_fcp::model::unique_identifier::UniqueIdentifier;
 use mycelink_lib_fcp::model::upload_type::UploadType::Direct;
-use mycelink_lib_fcp_bench::fcp_helper::{prepare_connection, receive_message};
+use mycelink_lib_fcp::model::uri::URI;
+use mycelink_lib_fcp_bench::fcp_helper::measure_put_time;
 use rand::RngCore;
-use tokio::io::AsyncWriteExt;
 
 pub fn ksk_bench(c: &mut Criterion) {
     c.bench_function("usk_initial_bench", |b| {
@@ -28,11 +27,16 @@ pub fn ksk_bench(c: &mut Criterion) {
 async fn ksk_bench_initial_fn() {
     let mut data: [u8; 1024] = [0; 1024];
     rand::thread_rng().fill_bytes(&mut data);
-    let (mut tx, mut rx) = prepare_connection().await;
+
+    let test_tag = UNIX_EPOCH.elapsed().unwrap().as_millis();
+    let uri: URI = format!("KSK@my_little_benchmark_age-{test_tag}")
+        .as_str()
+        .try_into()
+        .unwrap();
 
     let put_message = ClientPutMessage {
         early_encode: false,
-        uri: "KSK@my_littel_benchmark_age".try_into().unwrap(),
+        uri: uri.clone(),
         content_type: None,
         identifier: UniqueIdentifier::new("Bench insert USK"),
         verbosity: Default::default(),
@@ -47,10 +51,5 @@ async fn ksk_bench_initial_fn() {
         real_time: true,
     };
 
-    let encoded = (&put_message).to_message().encode();
-    tx.write_all(encoded.as_slice()).await.unwrap();
-
-    let _uri_updated: UriGeneratedMessage = receive_message(&mut rx).await.try_into().unwrap();
-
-    let _put_successful: PutSuccessfulMessage = receive_message(&mut rx).await.try_into().unwrap();
+    measure_put_time(put_message, uri).await;
 }

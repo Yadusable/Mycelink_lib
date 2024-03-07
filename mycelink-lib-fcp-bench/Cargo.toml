@@ -19,4 +19,5 @@ rand = "0.8"
 
 [dependencies]
 mycelink-lib-fcp = { path = "../mycelink-lib-fcp" }
-tokio = { version = "1.36", features = ["io-util", "macros"] }
+rand = "0.8"
+tokio = { version = "1.36", features = ["io-util", "macros", "rt"] }

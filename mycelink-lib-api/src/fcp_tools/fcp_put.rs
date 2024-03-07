@@ -22,6 +22,7 @@ pub async fn fcp_put_inline(
     let identifier = UniqueIdentifier::new("publish account");
 
     let put_message = ClientPutMessage {
+        early_encode: false,
         uri,
         content_type: Some("application/json".parse().unwrap()),
         identifier: identifier.clone(),

@@ -1,7 +1,7 @@
 use crate::decode_error::DecodeError;
 use std::str::FromStr;
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub struct URI {
     uri: Box<str>,
 }

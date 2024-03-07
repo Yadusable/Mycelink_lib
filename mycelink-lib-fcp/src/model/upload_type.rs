@@ -1,6 +1,7 @@
 use crate::model::uri::URI;
 use std::path::Path;
 
+#[derive(Debug, Eq, PartialEq)]
 pub enum UploadType {
     Direct { data: Vec<u8> },
     Disk { path: Box<Path> },

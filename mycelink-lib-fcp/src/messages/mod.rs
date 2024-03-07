@@ -11,6 +11,7 @@ pub mod put_failed;
 pub mod put_successful;
 pub mod ssk_keypair;
 pub mod subscribe_usk;
+pub mod subscribed_usk_update;
 pub mod test_dda_complete;
 pub mod test_dda_reply;
 pub mod test_dda_request;

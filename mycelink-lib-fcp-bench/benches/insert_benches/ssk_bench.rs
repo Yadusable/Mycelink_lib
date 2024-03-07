@@ -2,17 +2,15 @@
 
 use criterion::Criterion;
 use mycelink_lib_fcp::messages::client_put::ClientPutMessage;
-use mycelink_lib_fcp::messages::put_successful::PutSuccessfulMessage;
-use mycelink_lib_fcp::messages::uri_generated::UriGeneratedMessage;
-use mycelink_lib_fcp::model::message::FCPEncodable;
 use mycelink_lib_fcp::model::persistence::Persistence;
 use mycelink_lib_fcp::model::priority_class::PriorityClass;
 use mycelink_lib_fcp::model::unique_identifier::UniqueIdentifier;
 use mycelink_lib_fcp::model::upload_type::UploadType::Direct;
-use mycelink_lib_fcp_bench::fcp_helper::{generate_ssk, prepare_connection, receive_message};
+use mycelink_lib_fcp_bench::fcp_helper::{
+    generate_ssk, measure_put_time, prepare_connection, FCP_PORT_1,
+};
 use rand::RngCore;
 use std::ops::Deref;
-use tokio::io::AsyncWriteExt;
 
 pub fn ssk_bench(c: &mut Criterion) {
     c.bench_function("ssk_initial_bench", |b| {
@@ -29,7 +27,7 @@ pub fn ssk_bench(c: &mut Criterion) {
 async fn ssk_bench_initial_fn() {
     let mut data: [u8; 1024] = [0; 1024];
     rand::thread_rng().fill_bytes(&mut data);
-    let (mut tx, mut rx) = prepare_connection().await;
+    let (mut tx, mut rx) = prepare_connection(FCP_PORT_1).await;
 
     let keypair = generate_ssk(&mut tx, &mut rx).await;
 
@@ -50,10 +48,5 @@ async fn ssk_bench_initial_fn() {
         real_time: true,
     };
 
-    let encoded = (&put_message).to_message().encode();
-    tx.write_all(encoded.as_slice()).await.unwrap();
-
-    let _uri_updated: UriGeneratedMessage = receive_message(&mut rx).await.try_into().unwrap();
-
-    let _put_successful: PutSuccessfulMessage = receive_message(&mut rx).await.try_into().unwrap();
+    measure_put_time(put_message, keypair.request_uri.deref().try_into().unwrap()).await;
 }

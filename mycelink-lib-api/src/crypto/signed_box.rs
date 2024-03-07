@@ -29,13 +29,46 @@ impl<P: SignatureProvider<Provider = P>, H: HashProvider<Hash = P::Hash>> Signed
         }
     }
 
-    pub fn verify(self, data: &[u8]) -> Result<Box<[u8]>, ()> {
-        let hash = H::hash(data);
+    pub fn verify(self) -> Result<Box<[u8]>, ()> {
+        let hash = H::hash(self.data.as_ref());
 
         if P::verify::<H>(&self.signature, &hash, &self.public_key) {
             Ok(self.data)
         } else {
             Err(())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::crypto::hash_provider::sha512::Sha512;
+    use crate::crypto::hash_provider::HashProvider;
+    use crate::crypto::signature_providers::ed25519::Ed25519;
+    use crate::crypto::signature_providers::SignatureProvider;
+    use crate::crypto::signed_box::SignedBox;
+
+    fn test_sign_verify_generic<
+        P: SignatureProvider<Provider = P>,
+        H: HashProvider<Hash = P::Hash>,
+    >() {
+        let data = "Hello World".as_bytes();
+        let signer = P::generate_signing_keypair();
+
+        let signed_box = SignedBox::<P, H>::sign(data.into(), &signer);
+
+        assert_eq!(signed_box.verify().unwrap().as_ref(), data);
+
+        let other_data = "Live Well".as_bytes();
+
+        let mut manipulate_box = SignedBox::<P, H>::sign(data.into(), &signer);
+        manipulate_box.data = other_data.into();
+
+        assert!(manipulate_box.verify().is_err())
+    }
+
+    #[test]
+    fn test_sign_verify_ed25519_sha512() {
+        test_sign_verify_generic::<Ed25519, Sha512>()
     }
 }

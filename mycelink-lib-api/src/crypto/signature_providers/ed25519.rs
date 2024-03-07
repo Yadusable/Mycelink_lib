@@ -11,7 +11,7 @@ impl SignatureProvider for Ed25519 {
     type PublicKey = [u8; 32];
     type PrivateKey = [u8; 32];
     type Signature = ByteArray64;
-    type Hash = [u8; 64];
+    type Hash = ByteArray64;
 
     fn generate_signing_keypair() -> SignatureKeyPair<Self::Provider> {
         let private_key = ed25519_dalek::SigningKey::generate(&mut rand::rngs::OsRng);
@@ -23,14 +23,14 @@ impl SignatureProvider for Ed25519 {
         }
     }
 
-    fn sign<H: HashProvider<Hash = [u8; 64]>>(
+    fn sign<H: HashProvider<Hash = ByteArray64>>(
         hash: &H::Hash,
         keypair: &SignatureKeyPair<Ed25519>,
     ) -> Self::Signature {
         let private = keypair.private_key;
         let private = ed25519_dalek::SigningKey::from_bytes(&private);
 
-        let digest = DummyDigest(*hash);
+        let digest = DummyDigest(hash.0);
 
         let signature = private.sign_prehashed(digest, None).unwrap();
 
@@ -55,7 +55,7 @@ impl SignatureProvider for Ed25519 {
 
         let signature = Signature::from_bytes(&signature.0);
 
-        if let Err(err) = public_key.verify_prehashed(DummyDigest(*hash), None, &signature) {
+        if let Err(err) = public_key.verify_prehashed(DummyDigest(hash.0), None, &signature) {
             log::warn!("Failed to verify signature with err {err}");
             false
         } else {
@@ -96,7 +96,7 @@ mod dummy {
         }
 
         fn finalize(self) -> Output<Self> {
-            panic!("New shouldn't be called on dummy digest")
+            self.0.into()
         }
 
         fn finalize_into(self, _out: &mut Output<Self>) {

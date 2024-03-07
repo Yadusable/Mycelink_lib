@@ -2,6 +2,7 @@ use crate::crypto::symmetrical_providers::SymmetricEncryptionProvider;
 use chacha20poly1305::{AeadCore, AeadInPlace, KeyInit};
 use std::ops::DerefMut;
 
+use crate::crypto::key_material::KeyMaterial;
 use crate::crypto::secret_box::DecryptionFailed;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
@@ -18,6 +19,10 @@ impl SymmetricEncryptionProvider for XChaCha20Poly1305 {
         let mut key = [0; 32];
         rand::rngs::OsRng.fill_bytes(&mut key);
         key
+    }
+
+    fn generate_key_from_material(material: KeyMaterial) -> Self::Key {
+        material.into()
     }
 
     fn encrypt(mut data: Box<[u8]>, key: &Self::Key) -> Self::Encrypted {

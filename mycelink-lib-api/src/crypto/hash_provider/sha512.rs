@@ -15,7 +15,7 @@ impl HashProvider for Sha512 {
         ByteArray64(hash.as_slice().try_into().unwrap())
     }
 
-    fn derive_key(key_material: KeyMaterial, purpose: &'static str) -> KeyMaterial {
+    fn derive_key(key_material: &KeyMaterial, purpose: &'static str) -> KeyMaterial {
         let hkdf = Hkdf::<sha2::Sha512>::new(None, key_material.as_ref());
         let mut out: Self::Hash = ByteArray64([0; 64]);
         hkdf.expand(purpose.as_bytes(), &mut out.as_mut()).unwrap();

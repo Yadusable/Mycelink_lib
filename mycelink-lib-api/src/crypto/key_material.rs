@@ -2,7 +2,7 @@ use crate::crypto::key_material::KeyMaterial::{KM256, KM512};
 use crate::crypto::types::byte_array_64::ByteArray64;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum KeyMaterial {
     KM256([u8; 32]),
     KM512(ByteArray64),

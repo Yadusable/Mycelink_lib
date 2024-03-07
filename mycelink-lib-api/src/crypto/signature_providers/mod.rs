@@ -29,8 +29,8 @@ pub trait SignatureProvider {
     type Hash;
 
     fn generate_signing_keypair() -> SignatureKeyPair<Self::Provider>;
-    fn sign<H: HashProvider<Hash = Self::Hash>>(
-        hash: &H::Hash,
+    fn sign(
+        hash: &Self::Hash,
         keypair: &SignatureKeyPair<Self::Provider>,
     ) -> Self::Signature;
     fn verify<H: HashProvider<Hash = Self::Hash>>(

@@ -80,7 +80,7 @@ async fn usk_bench_initial_fn() {
 }
 
 async fn usk_bench_update(insert_uri: String, request_uri: String) {
-    let mut data: [u8; 64] = [0; 64];
+    let mut data: [u8; 1024] = [0; 1024];
     rand::thread_rng().fill_bytes(&mut data);
 
     let put_message = ClientPutMessage {

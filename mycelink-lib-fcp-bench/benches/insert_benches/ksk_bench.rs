@@ -13,7 +13,7 @@ use mycelink_lib_fcp_bench::fcp_helper::measure_put_time;
 use rand::RngCore;
 
 pub fn ksk_bench(c: &mut Criterion) {
-    c.bench_function("usk_initial_bench", |b| {
+    c.bench_function("ksk_initial_bench", |b| {
         b.to_async(
             tokio::runtime::Builder::new_current_thread()
                 .enable_all()

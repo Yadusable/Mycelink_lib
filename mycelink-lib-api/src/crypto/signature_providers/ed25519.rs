@@ -2,7 +2,7 @@ use crate::crypto::hash_provider::HashProvider;
 use crate::crypto::keypairs::SignatureKeyPair;
 use crate::crypto::signature_providers::ed25519::dummy::DummyDigest;
 use crate::crypto::signature_providers::SignatureProvider;
-use crate::crypto::types::ByteArray64;
+use crate::crypto::types::byte_array_64::ByteArray64;
 use ed25519_dalek::{Signature, VerifyingKey};
 
 pub struct Ed25519 {}

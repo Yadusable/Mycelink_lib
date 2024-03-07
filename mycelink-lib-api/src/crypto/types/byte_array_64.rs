@@ -1,8 +1,8 @@
 use hex::{FromHex, FromHexError};
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::array::TryFromSliceError;
 use std::fmt;
+use std::ops::Deref;
 
 #[derive(Debug, Clone)]
 pub struct ByteArray64(pub [u8; 64]);
@@ -18,6 +18,19 @@ impl Serialize for ByteArray64 {
 
 impl AsRef<[u8]> for ByteArray64 {
     fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+impl AsMut<[u8]> for ByteArray64 {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
+
+impl Deref for ByteArray64 {
+    type Target = [u8; 64];
+
+    fn deref(&self) -> &Self::Target {
         &self.0
     }
 }

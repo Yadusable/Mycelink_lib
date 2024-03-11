@@ -2,18 +2,14 @@
 
 use criterion::Criterion;
 use mycelink_lib_fcp::messages::client_put::ClientPutMessage;
-use mycelink_lib_fcp::messages::subscribe_usk::SubscribeUSKMessage;
-use mycelink_lib_fcp::model::message::FCPEncodable;
 use mycelink_lib_fcp::model::persistence::Persistence;
 use mycelink_lib_fcp::model::priority_class::PriorityClass;
 use mycelink_lib_fcp::model::unique_identifier::UniqueIdentifier;
 use mycelink_lib_fcp::model::upload_type::UploadType::Direct;
 use mycelink_lib_fcp_bench::fcp_helper::{
-    generate_ssk, measure_put_time, measure_usk_update_time, prepare_connection, FCP_PORT_1,
-    FCP_PORT_2,
+    generate_ssk, measure_put_time, measure_usk_update_time_10, prepare_connection, FCP_PORT_1,
 };
 use rand::RngCore;
-use tokio::io::AsyncWriteExt;
 
 pub fn usk_bench(c: &mut Criterion) {
     println!("Prepare USK Update test");
@@ -41,7 +37,7 @@ pub fn usk_bench(c: &mut Criterion) {
                 .unwrap(),
         )
         .iter(|| async {
-            usk_bench_update(update_insert_uri.clone(), update_request_uri.clone()).await
+            usk_bench_update_10(update_insert_uri.clone(), update_request_uri.clone()).await
         })
     });
 }
@@ -79,7 +75,7 @@ async fn usk_bench_initial_fn() {
     measure_put_time(put_message, request_uri.as_str().try_into().unwrap()).await;
 }
 
-async fn usk_bench_update(insert_uri: String, request_uri: String) {
+async fn usk_bench_update_10(insert_uri: String, request_uri: String) {
     let mut data: [u8; 1024] = [0; 1024];
     rand::thread_rng().fill_bytes(&mut data);
 
@@ -89,7 +85,7 @@ async fn usk_bench_update(insert_uri: String, request_uri: String) {
         content_type: None,
         identifier: UniqueIdentifier::new("Bench update USK"),
         verbosity: Default::default(),
-        max_retries: 0,
+        max_retries: 3,
         priority: PriorityClass::High,
         get_only_chk: false,
         dont_compress: true,
@@ -100,7 +96,7 @@ async fn usk_bench_update(insert_uri: String, request_uri: String) {
         real_time: true,
     };
 
-    measure_usk_update_time(put_message, request_uri.as_str().try_into().unwrap()).await;
+    measure_usk_update_time_10(put_message, request_uri.as_str().try_into().unwrap()).await;
 }
 
 async fn prepare_for_update_test() -> (String, String) {
@@ -133,24 +129,6 @@ async fn prepare_for_update_test() -> (String, String) {
     };
 
     measure_put_time(put_message, request_uri.as_str().try_into().unwrap()).await;
-
-    let mut conn_2 = prepare_connection(FCP_PORT_2).await;
-
-    let subscribe = SubscribeUSKMessage {
-        uri: request_uri.as_str().try_into().unwrap(),
-        dont_poll: false,
-        identifier: UniqueIdentifier::new("Measure update usk"),
-        priority_class: PriorityClass::High,
-        real_time: true,
-        sparse_poll: false,
-        ignore_usk_datehints: false,
-    };
-
-    conn_2
-        .0
-        .write_all(subscribe.to_message().encode().as_slice())
-        .await
-        .unwrap();
 
     (insert_uri, request_uri)
 }

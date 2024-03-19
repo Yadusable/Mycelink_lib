@@ -3,7 +3,7 @@ use crate::crypto::signature_providers::SignatureProvider;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct SignatureKeyPair<P: SignatureProvider> {
+pub struct SignatureKeyPair<P: SignatureProvider + ?Sized> {
     pub public_key: P::PublicKey,
     pub private_key: P::PrivateKey,
 }

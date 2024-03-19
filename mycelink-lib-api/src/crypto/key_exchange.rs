@@ -95,7 +95,7 @@ mod tests {
 
         let (answer, c2) = initial.answer();
 
-        let c1 = answer.complete(p1);
+        let c1 = answer.complete(p1).unwrap();
 
         let s1 = c1.derive_material();
         let s2 = c2.derive_material();

@@ -18,7 +18,7 @@ pub struct SignedBox<P: SignatureProvider, H: HashProvider> {
     data: Box<[u8]>,
 }
 
-impl<P: SignatureProvider<Provider = P>, H: HashProvider<Hash = P::Hash>> SignedBox<P, H> {
+impl<P: SignatureProvider, H: HashProvider<Hash = P::Hash>> SignedBox<P, H> {
     pub fn sign<T: Serialize>(item: T, keys: &SignatureKeyPair<P>) -> SignedBox<P, H> {
         let mut data = Vec::new();
         ciborium::into_writer(&item, &mut data).unwrap();
@@ -79,10 +79,7 @@ mod tests {
     use crate::crypto::signature_providers::SignatureProvider;
     use crate::crypto::signed_box::SignedBox;
 
-    fn test_sign_verify_generic<
-        P: SignatureProvider<Provider = P>,
-        H: HashProvider<Hash = P::Hash>,
-    >() {
+    fn test_sign_verify_generic<P: SignatureProvider, H: HashProvider<Hash = P::Hash>>() {
         let data: Box<[u8]> = "Hello World".as_bytes().into();
         let signer = P::generate_signing_keypair();
 

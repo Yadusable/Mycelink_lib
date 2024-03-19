@@ -7,8 +7,6 @@ use serde::{Deserialize, Serialize};
 pub mod x25519;
 
 pub trait AsymmetricEncryptionProvider {
-    type Provider: AsymmetricEncryptionProvider;
-
     type PublicKey: Clone
         + Serialize
         + for<'de> Deserialize<'de>
@@ -22,6 +20,6 @@ pub trait AsymmetricEncryptionProvider {
         + hex::ToHex
         + AsRef<[u8]>;
 
-    fn generate_encryption_keypair() -> EncryptionKeyPair<Self::Provider>;
-    fn finish_key_exchange(exchange: CompletedKeyExchange<Self::Provider>) -> KeyMaterial;
+    fn generate_encryption_keypair() -> EncryptionKeyPair<Self>;
+    fn finish_key_exchange(exchange: CompletedKeyExchange<Self>) -> KeyMaterial;
 }

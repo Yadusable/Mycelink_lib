@@ -3,7 +3,6 @@ use chacha20poly1305::{AeadCore, AeadInPlace, KeyInit};
 use std::ops::DerefMut;
 
 use crate::crypto::key_material::KeyMaterial;
-use crate::crypto::secret_box::DecryptionFailed;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
@@ -40,7 +39,7 @@ impl SymmetricEncryptionProvider for XChaCha20Poly1305 {
         }
     }
 
-    fn decrypt(mut data: Self::Encrypted, key: &Self::Key) -> Result<Box<[u8]>, DecryptionFailed> {
+    fn decrypt(mut data: Self::Encrypted, key: &Self::Key) -> Result<Box<[u8]>, ()> {
         let cipher = chacha20poly1305::XChaCha20Poly1305::new(key.into());
 
         match cipher.decrypt_in_place_detached(

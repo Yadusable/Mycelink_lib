@@ -1,14 +1,7 @@
 use crate::crypto::key_exchange_providers::AsymmetricEncryptionProvider;
 use crate::crypto::key_material::KeyMaterial;
+use crate::crypto::keypairs::EncryptionKeyPair;
 use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct PrivateInitiateKeyExchangePart<P: AsymmetricEncryptionProvider> {
-    #[serde(with = "hex::serde")]
-    own_public_key: P::PublicKey,
-    #[serde(with = "hex::serde")]
-    own_private_key: P::PrivateKey,
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitiateKeyExchange<P: AsymmetricEncryptionProvider> {
@@ -16,19 +9,15 @@ pub struct InitiateKeyExchange<P: AsymmetricEncryptionProvider> {
     public_key: P::PublicKey,
 }
 
-impl<P: AsymmetricEncryptionProvider<Provider = P>> InitiateKeyExchange<P> {
-    pub fn new() -> (Self, PrivateInitiateKeyExchangePart<P>) {
+impl<P: AsymmetricEncryptionProvider> InitiateKeyExchange<P> {
+    pub fn new() -> (Self, EncryptionKeyPair<P>) {
         let keypair = P::generate_encryption_keypair();
 
         let initiate_part = InitiateKeyExchange {
             public_key: keypair.public_key.clone(),
         };
-        let private_part = PrivateInitiateKeyExchangePart {
-            own_public_key: keypair.public_key,
-            own_private_key: keypair.private_key,
-        };
 
-        (initiate_part, private_part)
+        (initiate_part, keypair)
     }
 
     pub fn answer(self) -> (AnswerKeyExchange<P>, CompletedKeyExchange<P>) {
@@ -56,25 +45,26 @@ pub struct AnswerKeyExchange<P: AsymmetricEncryptionProvider> {
     answer_public_key: P::PublicKey,
 }
 
-impl<P: AsymmetricEncryptionProvider<Provider = P>> AnswerKeyExchange<P> {
-    pub fn complete(
-        self,
-        private_part: PrivateInitiateKeyExchangePart<P>,
-    ) -> CompletedKeyExchange<P> {
+impl<P: AsymmetricEncryptionProvider> AnswerKeyExchange<P> {
+    pub fn complete(&self, private_part: EncryptionKeyPair<P>) -> CompletedKeyExchange<P> {
         CompletedKeyExchange {
-            public_component: self.answer_public_key,
-            private_component: private_part.own_private_key,
+            public_component: self.answer_public_key.clone(),
+            private_component: private_part.private_key,
         }
+    }
+
+    pub fn public_component(&self) -> &P::PublicKey {
+        &self.initiate_public_key
     }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CompletedKeyExchange<P: AsymmetricEncryptionProvider> {
+pub struct CompletedKeyExchange<P: AsymmetricEncryptionProvider + ?Sized> {
     public_component: P::PublicKey,
     private_component: P::PrivateKey,
 }
 
-impl<P: AsymmetricEncryptionProvider<Provider = P>> CompletedKeyExchange<P> {
+impl<P: AsymmetricEncryptionProvider> CompletedKeyExchange<P> {
     pub(super) fn into_components(self) -> (P::PublicKey, P::PrivateKey) {
         (self.public_component, self.private_component)
     }
@@ -90,7 +80,7 @@ mod tests {
     use crate::crypto::key_exchange_providers::x25519::X25519;
     use crate::crypto::key_exchange_providers::AsymmetricEncryptionProvider;
 
-    fn test_full_exchange_generic<P: AsymmetricEncryptionProvider<Provider = P>>() {
+    fn test_full_exchange_generic<P: AsymmetricEncryptionProvider>() {
         let (initial, p1) = InitiateKeyExchange::<P>::new();
 
         let (answer, c2) = initial.answer();

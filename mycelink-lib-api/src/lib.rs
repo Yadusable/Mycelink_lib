@@ -3,6 +3,7 @@ mod crypto;
 pub mod db;
 mod fcp_tools;
 mod model;
+mod mycelink;
 
 #[cfg(test)]
 mod test {

@@ -4,11 +4,9 @@ use crate::crypto::key_material::KeyMaterial;
 use crate::crypto::keypairs::EncryptionKeyPair;
 use x25519_dalek::{x25519, PublicKey, StaticSecret};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct X25519 {}
 impl AsymmetricEncryptionProvider for X25519 {
-    type Provider = X25519;
-
     type PublicKey = [u8; 32];
     type PrivateKey = [u8; 32];
 

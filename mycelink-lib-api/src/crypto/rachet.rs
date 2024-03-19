@@ -5,11 +5,11 @@ use std::borrow::Cow;
 use std::marker::PhantomData;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Ratchet<H: HashProvider> {
+pub struct Ratchet<H: HashProvider + ?Sized> {
     hasher: PhantomData<H>,
     current_iteration: u32,
     current_state: KeyMaterial,
-    purpose: &'static str,
+    purpose: RatchetPurpose,
 }
 
 impl<H: HashProvider> Clone for Ratchet<H> {
@@ -24,7 +24,7 @@ impl<H: HashProvider> Clone for Ratchet<H> {
 }
 
 impl<H: HashProvider> Ratchet<H> {
-    pub fn new(key_material: KeyMaterial, purpose: &'static str) -> Self {
+    pub fn new(key_material: KeyMaterial, purpose: RatchetPurpose) -> Self {
         Self {
             hasher: PhantomData,
             current_iteration: 0,
@@ -35,11 +35,11 @@ impl<H: HashProvider> Ratchet<H> {
 
     pub fn advance(&mut self) {
         self.current_iteration += 1;
-        self.current_state = H::derive_key(&self.current_state, "Mycelink Ratchet Advance")
+        self.current_state = H::derive_key(&self.current_state, "Mycelink ratchet advance")
     }
 
     pub fn current_key(&self) -> KeyMaterial {
-        H::derive_key(&self.current_state, self.purpose)
+        H::derive_key(&self.current_state, self.purpose.as_str())
     }
 
     pub fn get_key(&self, iteration: u32) -> Result<KeyMaterial, ()> {
@@ -57,5 +57,18 @@ impl<H: HashProvider> Ratchet<H> {
         }
 
         Ok(ratchet.current_key())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
+pub enum RatchetPurpose {
+    MycelinkChannel,
+}
+
+impl RatchetPurpose {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            RatchetPurpose::MycelinkChannel => "MycelinkChannel",
+        }
     }
 }

@@ -4,6 +4,7 @@ use crate::crypto::types::byte_array_64::ByteArray64;
 use hkdf::Hkdf;
 use sha2::Digest;
 
+#[derive(Debug)]
 pub struct Sha512 {}
 impl HashProvider for Sha512 {
     type Hash = ByteArray64;

@@ -44,7 +44,7 @@ impl TaggedAnswerKeyExchange {
         match self {
             TaggedAnswerKeyExchange::X25519(inner) => {
                 let part: &EncryptionKeyPair<X25519> = possible_part.try_into()?;
-                let completed = inner.complete(part.clone());
+                let completed = inner.complete(part.clone())?;
                 Ok(X25519::finish_key_exchange(completed))
             }
         }

@@ -1,4 +1,4 @@
-use crate::crypto::kdf_provider::{KdfProvider, KdfProviderTag};
+use crate::crypto::kdf_provider::KdfProviderTag;
 use crate::crypto::key_material::KeyMaterial;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;

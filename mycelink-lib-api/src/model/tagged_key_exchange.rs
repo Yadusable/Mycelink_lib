@@ -50,10 +50,18 @@ impl TaggedAnswerKeyExchange {
         }
     }
 
-    pub fn public_component(&self) -> PublicEncryptionKey {
+    pub fn initiate_public_key(&self) -> PublicEncryptionKey {
         match self {
             TaggedAnswerKeyExchange::X25519(inner) => {
-                PublicEncryptionKey::X25519(*inner.public_component())
+                PublicEncryptionKey::X25519(*inner.initiate_public_key())
+            }
+        }
+    }
+
+    pub fn answer_public_key(&self) -> PublicEncryptionKey {
+        match self {
+            TaggedAnswerKeyExchange::X25519(inner) => {
+                PublicEncryptionKey::X25519(*inner.answer_public_key())
             }
         }
     }

@@ -6,7 +6,6 @@ pub mod media;
 pub mod message;
 pub mod message_types;
 pub mod mycelink_account;
-pub mod ratchet_hash_tag;
 pub mod tagged_hash;
 pub mod tagged_key_exchange;
 pub mod tagged_keypair;

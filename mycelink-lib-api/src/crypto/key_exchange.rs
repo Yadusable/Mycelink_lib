@@ -47,14 +47,21 @@ pub struct AnswerKeyExchange<P: AsymmetricEncryptionProvider> {
 
 impl<P: AsymmetricEncryptionProvider> AnswerKeyExchange<P> {
     pub fn complete(&self, private_part: EncryptionKeyPair<P>) -> CompletedKeyExchange<P> {
+        if private_part.public_key != self.initiate_public_key {
+            todo!()
+        }
+
         CompletedKeyExchange {
             public_component: self.answer_public_key.clone(),
             private_component: private_part.private_key,
         }
     }
 
-    pub fn public_component(&self) -> &P::PublicKey {
+    pub fn initiate_public_key(&self) -> &P::PublicKey {
         &self.initiate_public_key
+    }
+    pub fn answer_public_key(&self) -> &P::PublicKey {
+        &self.answer_public_key
     }
 }
 

@@ -12,7 +12,9 @@ pub trait AsymmetricEncryptionProvider {
         + for<'de> Deserialize<'de>
         + hex::FromHex<Error = FromHexError>
         + hex::ToHex
-        + AsRef<[u8]>;
+        + AsRef<[u8]>
+        + PartialEq
+        + Eq;
     type PrivateKey: Clone
         + Serialize
         + for<'de> Deserialize<'de>

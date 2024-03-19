@@ -21,3 +21,11 @@ pub enum PrivateSigningKey {}
 pub enum PrivateEncryptionKey {
     X25519(#[serde(with = "hex::serde")] <X25519 as AsymmetricEncryptionProvider>::PrivateKey),
 }
+
+impl AsRef<[u8]> for PublicEncryptionKey {
+    fn as_ref(&self) -> &[u8] {
+        match self {
+            PublicEncryptionKey::X25519(inner) => inner,
+        }
+    }
+}

@@ -1,9 +1,8 @@
-use crate::crypto::hash_provider::HashProvider;
-use crate::crypto::rachet::Ratchet;
+use crate::crypto::kdf_provider::KdfProviderTag;
+use crate::crypto::ratchet::{Ratchet, RatchetPurpose};
 use crate::crypto::secret_box::SecretBoxError;
 use crate::crypto::signed_box::SignedBoxError;
 use crate::model::keys::{PublicEncryptionKey, PublicSigningKey};
-use crate::model::ratchet_hash_tag::RatchetHashTag;
 use crate::model::tagged_key_exchange::TaggedAnswerKeyExchange;
 use crate::model::tagged_keypair::TaggedEncryptionKeyPair;
 use crate::model::tagged_secret_box::TaggedSecretBox;
@@ -11,28 +10,53 @@ use crate::model::tagged_signed_box::TaggedSignedBox;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MycelinkChannel<H: HashProvider> {
-    send_ratchet: Ratchet<H>,
-    receive_ratchet: Ratchet<H>,
+pub struct MycelinkChannel {
+    send_ratchet: Ratchet,
+    receive_ratchet: Ratchet,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MycelinkChannelRequest {
     keys: TaggedAnswerKeyExchange,
-    ratchet_hash: RatchetHashTag,
+    kdf: KdfProviderTag,
 }
 
 impl MycelinkChannelRequest {
-    pub fn accept(self, keypair_candidates: &[&TaggedEncryptionKeyPair]) {
+    pub fn accept(
+        self,
+        keypair_candidates: &[&TaggedEncryptionKeyPair],
+    ) -> Result<MycelinkChannel, OpenChannelError> {
         for candidate in keypair_candidates {
-            if let Ok(keys) = self.keys.try_complete(candidate) {}
+            if let Ok(key) = self.keys.try_complete(candidate) {
+                let send_key = self.kdf.as_provider().derive_key(
+                    &key,
+                    &format!(
+                        "Mycelink open-channel {}",
+                        hex::encode(self.keys.initiate_public_key())
+                    ),
+                );
+
+                let receive_key = self.kdf.as_provider().derive_key(
+                    &key,
+                    &format!(
+                        "Mycelink open-channel {}",
+                        hex::encode(self.keys.answer_public_key())
+                    ),
+                );
+
+                let send_ratchet =
+                    Ratchet::new(send_key, RatchetPurpose::MycelinkChannel, self.kdf);
+                let receive_ratchet =
+                    Ratchet::new(receive_key, RatchetPurpose::MycelinkChannel, self.kdf);
+
+                return Ok(MycelinkChannel {
+                    send_ratchet,
+                    receive_ratchet,
+                });
+            }
         }
 
-        todo!()
-    }
-
-    pub fn used_public_component(&self) -> PublicEncryptionKey {
-        self.keys.public_component()
+        Err(OpenChannelError::NoMatchingKey)
     }
 }
 

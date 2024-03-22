@@ -22,3 +22,9 @@ impl TaggedSecretBox {
         }
     }
 }
+
+impl From<SecretBox<XChaCha20Poly1305>> for TaggedSecretBox {
+    fn from(value: SecretBox<XChaCha20Poly1305>) -> Self {
+        Self::XChaCha20(value)
+    }
+}

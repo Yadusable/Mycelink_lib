@@ -9,7 +9,7 @@ pub struct AllDataMessage {
     pub identifier: UniqueIdentifier,
     pub content_type: ContentType,
 
-    pub data: Vec<u8>,
+    pub data: Box<[u8]>,
 }
 
 impl TryFrom<Message> for AllDataMessage {

@@ -44,7 +44,7 @@ impl Message {
 
                 let mut buf = builder.into_bytes();
 
-                buf.extend_from_slice(payload.data.as_slice());
+                buf.extend_from_slice(payload.data.deref());
 
                 buf
             }
@@ -113,7 +113,7 @@ impl Message {
                 message_type,
                 fields,
                 payload: Some(MessagePayload {
-                    data: payload,
+                    data: payload.into(),
                     data_len_identifier: size_hint_key,
                 }),
             });
@@ -125,7 +125,7 @@ impl Message {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MessagePayload {
-    pub data: Vec<u8>,
+    pub data: Box<[u8]>,
     pub data_len_identifier: Box<str>,
 }
 

@@ -1,8 +1,11 @@
 pub mod xchacha20poly1305;
 
 use crate::crypto::key_material::KeyMaterial;
+use crate::crypto::symmetrical_providers::xchacha20poly1305::XChaCha20Poly1305;
 use hex::FromHexError;
 use serde::{Deserialize, Serialize};
+
+pub type DefaultSymmetricEncryptionProvider = XChaCha20Poly1305;
 
 pub trait SymmetricEncryptionProvider {
     type Key: Clone

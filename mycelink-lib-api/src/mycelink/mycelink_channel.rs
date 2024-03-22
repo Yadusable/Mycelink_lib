@@ -1,121 +1,195 @@
 use crate::crypto::kdf_provider::KdfProviderTag;
-use crate::crypto::ratchet::{Ratchet, RatchetPurpose};
-use crate::crypto::secret_box::SecretBoxError;
-use crate::crypto::signed_box::SignedBoxError;
-use crate::model::keys::{PublicEncryptionKey, PublicSigningKey};
-use crate::model::tagged_key_exchange::TaggedAnswerKeyExchange;
+use crate::crypto::key_exchange::InitiateKeyExchange;
+use crate::crypto::key_exchange_providers::x25519::X25519;
+use crate::crypto::key_material::KeyMaterial;
+use crate::crypto::ratchet::Ratchet;
+use crate::crypto::secret_box::{DefaultSecretBox, SecretBoxError};
+use crate::crypto::symmetrical_providers::{
+    DefaultSymmetricEncryptionProvider, SymmetricEncryptionProvider,
+};
+use crate::fcp_tools::fcp_get::{fcp_get_inline, FcpGetError};
+use crate::fcp_tools::fcp_put::{fcp_put_inline, FcpPutError};
+use crate::model::tagged_key_exchange::TaggedInitiateKeyExchange;
 use crate::model::tagged_keypair::TaggedEncryptionKeyPair;
 use crate::model::tagged_secret_box::TaggedSecretBox;
-use crate::model::tagged_signed_box::TaggedSignedBox;
+use crate::mycelink::compressed_box::{CompressedBox, CompressionHint};
+use crate::mycelink::mycelink_channel_message::{
+    InitialResponderChannelMessage, MycelinkChannelMessage,
+};
+use crate::mycelink::mycelink_channel_request::OpenChannelError;
+use crate::mycelink::mycelink_ratchet_key_generator::MycelinkRatchetKeyGenerator;
+use mycelink_lib_fcp::fcp_connector::FCPConnector;
+use mycelink_lib_fcp::model::priority_class::PriorityClass;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
+pub enum MycelinkChannelRole {
+    Initiator,
+    Responder,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MycelinkChannel {
+    role: MycelinkChannelRole,
     send_ratchet: Ratchet,
     receive_ratchet: Ratchet,
+    pending_keys: Vec<TaggedEncryptionKeyPair>,
+    pending_rekey: Box<[TaggedInitiateKeyExchange]>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MycelinkChannelRequest {
-    keys: TaggedAnswerKeyExchange,
-    kdf: KdfProviderTag,
-}
+impl MycelinkChannel {
+    fn new(
+        send_secret: KeyMaterial,
+        receive_secret: KeyMaterial,
+        role: MycelinkChannelRole,
+        kdf: KdfProviderTag,
+        pending_keys: Vec<TaggedEncryptionKeyPair>,
+        pending_rekey: Box<[TaggedInitiateKeyExchange]>,
+    ) -> Self {
+        let send_ratchet = Ratchet::new(send_secret, kdf);
+        let receive_ratchet = Ratchet::new(receive_secret, kdf);
 
-impl MycelinkChannelRequest {
-    pub fn accept(
-        self,
-        keypair_candidates: &[&TaggedEncryptionKeyPair],
+        MycelinkChannel {
+            role,
+            send_ratchet,
+            receive_ratchet,
+            pending_keys,
+            pending_rekey,
+        }
+    }
+
+    pub async fn open_initiator(
+        send_secret: KeyMaterial,
+        receive_secret: KeyMaterial,
+        kdf: KdfProviderTag,
+        fcp_connector: &FCPConnector,
     ) -> Result<MycelinkChannel, OpenChannelError> {
-        for candidate in keypair_candidates {
-            if let Ok(key) = self.keys.try_complete(candidate) {
-                let send_key = self.kdf.as_provider().derive_key(
-                    &key,
-                    &format!(
-                        "Mycelink open-channel {}",
-                        hex::encode(self.keys.initiate_public_key())
-                    ),
-                );
+        let mut channel = Self::new(
+            send_secret,
+            receive_secret,
+            MycelinkChannelRole::Initiator,
+            kdf,
+            vec![],
+            Box::new([]),
+        );
 
-                let receive_key = self.kdf.as_provider().derive_key(
-                    &key,
-                    &format!(
-                        "Mycelink open-channel {}",
-                        hex::encode(self.keys.answer_public_key())
-                    ),
-                );
+        let initial_message: InitialResponderChannelMessage =
+            channel.try_receive(fcp_connector).await?;
 
-                let send_ratchet =
-                    Ratchet::new(send_key, RatchetPurpose::MycelinkChannel, self.kdf);
-                let receive_ratchet =
-                    Ratchet::new(receive_key, RatchetPurpose::MycelinkChannel, self.kdf);
+        channel.pending_rekey = initial_message.available_public_component;
 
-                return Ok(MycelinkChannel {
-                    send_ratchet,
-                    receive_ratchet,
-                });
-            }
-        }
-
-        Err(OpenChannelError::NoMatchingKey)
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SignedMycelinkChannelRequest(TaggedSignedBox);
-
-impl SignedMycelinkChannelRequest {
-    pub fn verify(self) -> Result<(MycelinkChannelRequest, PublicSigningKey), SignedBoxError> {
-        let public_key = self.0.public_key();
-        let request = self.0.verify()?;
-
-        Ok((request, public_key))
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct EncryptedSignedMycelinkChannelRequest {
-    data: TaggedSecretBox,
-    encryption_keys: TaggedAnswerKeyExchange,
-}
-
-impl EncryptedSignedMycelinkChannelRequest {
-    pub fn try_open(
-        self,
-        keypair_candidates: &[&TaggedEncryptionKeyPair],
-    ) -> Result<(MycelinkChannelRequest, PublicSigningKey), OpenChannelError> {
-        let signed_request = self.try_decrypt(keypair_candidates)?;
-
-        Ok(signed_request.verify()?)
+        Ok(channel)
     }
 
-    fn try_decrypt(
-        self,
-        keypair_candidates: &[&TaggedEncryptionKeyPair],
-    ) -> Result<SignedMycelinkChannelRequest, OpenChannelError> {
-        for candidate in keypair_candidates {
-            if let Ok(material) = self.encryption_keys.try_complete(candidate) {
-                return Ok(self.data.try_decrypt(material)?);
-            }
-        }
-        Err(OpenChannelError::NoMatchingKey)
+    pub async fn open_responder(
+        send_secret: KeyMaterial,
+        receive_secret: KeyMaterial,
+        kdf: KdfProviderTag,
+        fcp_connector: &FCPConnector,
+    ) -> Result<Self, OpenChannelError> {
+        let (x25519_initiate, x25519_private) = InitiateKeyExchange::<X25519>::new();
+
+        let pending_keys = vec![TaggedEncryptionKeyPair::X25519(x25519_private)];
+
+        let initial_message = InitialResponderChannelMessage {
+            available_public_component: Box::new([TaggedInitiateKeyExchange::X25519(
+                x25519_initiate,
+            )]),
+        };
+
+        let mut channel = Self::new(
+            send_secret,
+            receive_secret,
+            MycelinkChannelRole::Responder,
+            kdf,
+            pending_keys,
+            initial_message.available_public_component.clone(),
+        );
+
+        channel
+            .send(&initial_message, CompressionHint::High, fcp_connector)
+            .await?;
+
+        Ok(channel)
+    }
+
+    async fn send(
+        &mut self,
+        payload: &impl Serialize,
+        compression_hint: CompressionHint,
+        fcp_connector: &FCPConnector,
+    ) -> Result<(), FcpPutError> {
+        let compressed = CompressedBox::compress(payload, compression_hint);
+
+        let encryption_key = self.send_ratchet.generate_message_encryption_key();
+        let encryption_key =
+            DefaultSymmetricEncryptionProvider::generate_key_from_material(encryption_key);
+        let encrypted = DefaultSecretBox::create(&compressed, &encryption_key);
+        let encrypted: TaggedSecretBox = encrypted.into();
+        let mut encoded_encrypted = Vec::new();
+        ciborium::into_writer(&encrypted, &mut encoded_encrypted).unwrap();
+
+        fcp_put_inline(
+            encoded_encrypted.into(),
+            self.send_ratchet.generate_send_message_ksk(),
+            fcp_connector,
+        )
+        .await?;
+        self.send_ratchet.advance();
+        Ok(())
+    }
+
+    async fn try_receive<T: for<'de> Deserialize<'de>>(
+        &mut self,
+        fcp_connector: &FCPConnector,
+    ) -> Result<T, ReceiveMessageError> {
+        let ksk = self.receive_ratchet.generate_send_message_ksk();
+        let message = fcp_get_inline(
+            ksk,
+            fcp_connector,
+            "Receive Mycelink Message",
+            PriorityClass::High,
+        )
+        .await?;
+        let decryption_key = self.receive_ratchet.generate_message_encryption_key();
+        self.receive_ratchet.advance();
+
+        let secret_box: TaggedSecretBox = ciborium::from_reader(message.data.as_ref())?;
+        let compressed: CompressedBox = secret_box.try_decrypt(decryption_key)?;
+        let original: T = compressed.open()?;
+
+        Ok(original)
+    }
+
+    pub async fn try_receive_message(
+        &mut self,
+        fcp_connector: &FCPConnector,
+    ) -> Result<MycelinkChannelMessage, ReceiveMessageError> {
+        self.try_receive(fcp_connector).await
     }
 }
 
 #[derive(Debug)]
-pub enum OpenChannelError {
-    NoMatchingKey,
-    DecryptionError(SecretBoxError),
-    SignatureError(SignedBoxError),
+pub enum ReceiveMessageError {
+    SecretBox(SecretBoxError),
+    Deserialize(ciborium::de::Error<std::io::Error>),
+    FcpGet(FcpGetError),
 }
 
-impl From<SecretBoxError> for OpenChannelError {
+impl From<SecretBoxError> for ReceiveMessageError {
     fn from(value: SecretBoxError) -> Self {
-        OpenChannelError::DecryptionError(value)
+        Self::SecretBox(value)
     }
 }
 
-impl From<SignedBoxError> for OpenChannelError {
-    fn from(value: SignedBoxError) -> Self {
-        OpenChannelError::SignatureError(value)
+impl From<ciborium::de::Error<std::io::Error>> for ReceiveMessageError {
+    fn from(value: ciborium::de::Error<std::io::Error>) -> Self {
+        Self::Deserialize(value)
+    }
+}
+
+impl From<FcpGetError> for ReceiveMessageError {
+    fn from(value: FcpGetError) -> Self {
+        Self::FcpGet(value)
     }
 }

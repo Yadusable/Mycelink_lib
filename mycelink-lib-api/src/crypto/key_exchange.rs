@@ -3,7 +3,7 @@ use crate::crypto::key_material::KeyMaterial;
 use crate::crypto::keypairs::EncryptionKeyPair;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct InitiateKeyExchange<P: AsymmetricEncryptionProvider> {
     #[serde(with = "hex::serde")]
     public_key: P::PublicKey,
@@ -50,12 +50,16 @@ impl<P: AsymmetricEncryptionProvider> AnswerKeyExchange<P> {
         &self,
         private_part: EncryptionKeyPair<P>,
     ) -> Result<CompletedKeyExchange<P>, ()> {
-        if private_part.public_key != self.initiate_public_key {
+        let public_component = if private_part.public_key == self.initiate_public_key {
+            &self.answer_public_key
+        } else if private_part.public_key == self.answer_public_key {
+            &self.initiate_public_key
+        } else {
             return Err(());
-        }
+        };
 
         Ok(CompletedKeyExchange {
-            public_component: self.answer_public_key.clone(),
+            public_component: public_component.clone(),
             private_component: private_part.private_key,
         })
     }

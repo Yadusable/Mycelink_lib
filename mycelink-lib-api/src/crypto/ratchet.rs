@@ -8,16 +8,14 @@ pub struct Ratchet {
     kdf: KdfProviderTag,
     current_iteration: u32,
     current_state: KeyMaterial,
-    purpose: RatchetPurpose,
 }
 
 impl Ratchet {
-    pub fn new(key_material: KeyMaterial, purpose: RatchetPurpose, kdf: KdfProviderTag) -> Self {
+    pub fn new(key_material: KeyMaterial, kdf: KdfProviderTag) -> Self {
         Self {
             kdf,
             current_iteration: 0,
             current_state: key_material,
-            purpose,
         }
     }
 
@@ -26,16 +24,16 @@ impl Ratchet {
         self.current_state = self
             .kdf
             .as_provider()
-            .derive_key(&self.current_state, "Mycelink ratchet advance")
+            .derive_key(&self.current_state, "Mycelink v1 ratchet advance")
     }
 
-    pub fn current_key(&self) -> KeyMaterial {
+    pub fn current_key(&self, purpose: &str) -> KeyMaterial {
         self.kdf
             .as_provider()
-            .derive_key(&self.current_state, self.purpose.as_str())
+            .derive_key(&self.current_state, purpose)
     }
 
-    pub fn get_key(&self, iteration: u32) -> Result<KeyMaterial, ()> {
+    pub fn get_key(&self, iteration: u32, purpose: &str) -> Result<KeyMaterial, ()> {
         if iteration < self.current_iteration {
             return Err(());
         }
@@ -49,19 +47,6 @@ impl Ratchet {
             ratchet = Cow::Owned(cloned)
         }
 
-        Ok(ratchet.current_key())
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
-pub enum RatchetPurpose {
-    MycelinkChannel,
-}
-
-impl RatchetPurpose {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            RatchetPurpose::MycelinkChannel => "MycelinkChannel",
-        }
+        Ok(ratchet.current_key(purpose))
     }
 }

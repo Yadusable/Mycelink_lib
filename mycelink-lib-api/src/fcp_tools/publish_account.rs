@@ -12,9 +12,10 @@ pub async fn publish_account(
 ) -> Result<(), PublishAccountError> {
     let uri: URI = account.insert_ssk_key().try_into().unwrap();
 
-    let encoded = serde_json::to_string(&account.generate_contact_info(display_name))?;
+    let mut encoded = Vec::new();
+    ciborium::into_writer(&account.generate_contact_info(display_name), &mut encoded).unwrap();
 
-    fcp_put_inline(encoded.into_bytes(), uri, fcp_connector).await?;
+    fcp_put_inline(encoded.into(), uri, fcp_connector).await?;
 
     Ok(())
 }
@@ -22,7 +23,6 @@ pub async fn publish_account(
 #[derive(Debug)]
 pub enum PublishAccountError {
     PutFailed { inner: FcpPutError },
-    SerdeJson { inner: serde_json::Error },
 }
 
 impl Error for PublishAccountError {}
@@ -36,12 +36,6 @@ impl Display for PublishAccountError {
 impl From<FcpPutError> for PublishAccountError {
     fn from(value: FcpPutError) -> Self {
         Self::PutFailed { inner: value }
-    }
-}
-
-impl From<serde_json::Error> for PublishAccountError {
-    fn from(value: serde_json::Error) -> Self {
-        Self::SerdeJson { inner: value }
     }
 }
 

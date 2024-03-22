@@ -7,7 +7,7 @@ use crate::model::keys::PublicEncryptionKey;
 use crate::model::tagged_keypair::TaggedEncryptionKeyPair;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TaggedInitiateKeyExchange {
     X25519(InitiateKeyExchange<X25519>),
 }

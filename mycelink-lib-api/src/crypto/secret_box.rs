@@ -1,16 +1,17 @@
-use crate::crypto::symmetrical_providers::xchacha20poly1305::XChaCha20Poly1305;
-use crate::crypto::symmetrical_providers::SymmetricEncryptionProvider;
+use crate::crypto::symmetrical_providers::{
+    DefaultSymmetricEncryptionProvider, SymmetricEncryptionProvider,
+};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-pub type DefaultSecretBox = SecretBox<XChaCha20Poly1305>;
+pub type DefaultSecretBox = SecretBox<DefaultSymmetricEncryptionProvider>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SecretBox<P: SymmetricEncryptionProvider>(P::Encrypted);
 
 impl<P: SymmetricEncryptionProvider> SecretBox<P> {
-    pub fn create<T: Serialize>(item: T, key: &P::Key) -> SecretBox<P> {
+    pub fn create<T: Serialize>(item: &T, key: &P::Key) -> SecretBox<P> {
         let mut plaintext = Vec::new();
         ciborium::into_writer(&item, &mut plaintext).unwrap();
         let payload = P::encrypt(plaintext.into(), key);

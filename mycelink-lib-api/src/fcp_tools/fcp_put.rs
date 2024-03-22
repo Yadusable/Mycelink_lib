@@ -15,7 +15,7 @@ use std::fmt::{Display, Formatter};
 use std::io::Error;
 
 pub async fn fcp_put_inline(
-    data: Vec<u8>,
+    data: Box<[u8]>,
     uri: URI,
     fcp_connector: &FCPConnector,
 ) -> Result<PutSuccessfulMessage, FcpPutError> {
@@ -23,7 +23,7 @@ pub async fn fcp_put_inline(
 
     let put_message = ClientPutMessage {
         uri,
-        content_type: Some("application/json".parse().unwrap()),
+        content_type: None,
         identifier: identifier.clone(),
         verbosity: Verbosity::default(),
         max_retries: 1,

@@ -1,4 +1,3 @@
-use crate::crypto::key_material::KeyMaterial;
 use serde::{Deserialize, Serialize};
 
 pub mod blake3;

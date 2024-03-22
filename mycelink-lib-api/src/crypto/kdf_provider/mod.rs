@@ -27,3 +27,9 @@ impl From<KdfProviderTag> for &'static dyn KdfProvider {
         }
     }
 }
+
+impl Default for KdfProviderTag {
+    fn default() -> Self {
+        KdfProviderTag::Blake3
+    }
+}

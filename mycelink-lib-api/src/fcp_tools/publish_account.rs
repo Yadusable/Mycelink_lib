@@ -50,6 +50,7 @@ mod tests {
 
     #[tokio::test]
     pub async fn test_upload_download() {
+        let _ = env_logger::try_init();
         let fcp_connector =
             create_test_fcp_connector("publish_account::test_upload_download").await;
 
@@ -69,11 +70,10 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(
-            get.data,
-            serde_json::to_string(&account.generate_contact_info("Test Account"))
-                .unwrap()
-                .into_bytes()
-        )
+        let mut payload = Vec::new();
+        ciborium::into_writer(&account.generate_contact_info("Test Account"), &mut payload)
+            .unwrap();
+
+        assert_eq!(get.data, payload.into())
     }
 }

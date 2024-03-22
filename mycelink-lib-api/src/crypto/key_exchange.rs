@@ -35,9 +35,13 @@ impl<P: AsymmetricEncryptionProvider> InitiateKeyExchange<P> {
 
         (answer, completed)
     }
+
+    pub fn into_public_key(self) -> P::PublicKey {
+        self.public_key
+    }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AnswerKeyExchange<P: AsymmetricEncryptionProvider> {
     #[serde(with = "hex::serde")]
     initiate_public_key: P::PublicKey,

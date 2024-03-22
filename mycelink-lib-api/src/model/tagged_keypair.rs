@@ -1,7 +1,7 @@
 use crate::crypto::key_exchange_providers::x25519;
+use crate::crypto::key_exchange_providers::x25519::X25519;
 use crate::crypto::keypairs::{EncryptionKeyPair, SignatureKeyPair};
 use crate::crypto::signature_providers::ed25519;
-use crate::model::tagged_keypair::TaggedEncryptionKeyPair::X25519;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -18,8 +18,14 @@ impl<'a> TryFrom<&'a TaggedEncryptionKeyPair> for &'a EncryptionKeyPair<x25519::
     type Error = ();
 
     fn try_from(value: &'a TaggedEncryptionKeyPair) -> Result<Self, Self::Error> {
-        let X25519(value) = value;
+        let TaggedEncryptionKeyPair::X25519(value) = value;
         Ok(value)
+    }
+}
+
+impl From<EncryptionKeyPair<X25519>> for TaggedEncryptionKeyPair {
+    fn from(value: EncryptionKeyPair<X25519>) -> Self {
+        Self::X25519(value)
     }
 }
 

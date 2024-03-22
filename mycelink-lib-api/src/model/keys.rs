@@ -9,6 +9,12 @@ pub enum PublicEncryptionKey {
     X25519(#[serde(with = "hex::serde")] <X25519 as AsymmetricEncryptionProvider>::PublicKey),
 }
 
+impl From<<X25519 as AsymmetricEncryptionProvider>::PublicKey> for PublicEncryptionKey {
+    fn from(value: <X25519 as AsymmetricEncryptionProvider>::PublicKey) -> Self {
+        PublicEncryptionKey::X25519(value)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub enum PublicSigningKey {
     Ed25519(#[serde(with = "hex::serde")] <Ed25519 as SignatureProvider>::PublicKey),

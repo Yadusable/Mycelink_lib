@@ -12,7 +12,7 @@ pub enum TaggedInitiateKeyExchange {
     X25519(InitiateKeyExchange<X25519>),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TaggedAnswerKeyExchange {
     X25519(AnswerKeyExchange<X25519>),
 }
@@ -35,6 +35,20 @@ impl TaggedInitiateKeyExchange {
                     private_part.derive_material(),
                 )
             }
+        }
+    }
+}
+
+impl From<InitiateKeyExchange<X25519>> for TaggedInitiateKeyExchange {
+    fn from(value: InitiateKeyExchange<X25519>) -> Self {
+        Self::X25519(value)
+    }
+}
+
+impl From<TaggedInitiateKeyExchange> for PublicEncryptionKey {
+    fn from(value: TaggedInitiateKeyExchange) -> Self {
+        match value {
+            TaggedInitiateKeyExchange::X25519(inner) => inner.into_public_key().into(),
         }
     }
 }

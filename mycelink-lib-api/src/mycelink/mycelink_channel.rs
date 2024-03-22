@@ -193,3 +193,29 @@ impl From<FcpGetError> for ReceiveMessageError {
         Self::FcpGet(value)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::crypto::key_exchange::InitiateKeyExchange;
+    use crate::crypto::key_exchange_providers::DefaultAsymmetricEncryptionProvider;
+    use crate::mycelink::mycelink_channel_request::MycelinkChannelRequest;
+    use crate::test::create_test_fcp_connector;
+
+    #[tokio::test]
+    async fn test_open_channel() {
+        let fcp_connector = create_test_fcp_connector("test_open_channel").await;
+
+        let (public_responder_static_key, private_responder_static_keys) =
+            InitiateKeyExchange::<DefaultAsymmetricEncryptionProvider>::new();
+
+        let (incoming_request, pending_request) =
+            MycelinkChannelRequest::create(public_responder_static_key.into());
+
+        let channel_receiver = incoming_request
+            .accept(&[&private_responder_static_keys.into()], &fcp_connector)
+            .await
+            .unwrap();
+
+        let channel_initiator = pending_request.check(&fcp_connector).await.unwrap();
+    }
+}

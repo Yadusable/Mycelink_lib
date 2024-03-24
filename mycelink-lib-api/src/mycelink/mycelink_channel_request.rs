@@ -37,16 +37,10 @@ impl MycelinkChannelRequest {
     ) -> Result<MycelinkChannel, OpenChannelError> {
         for candidate in keypair_candidates {
             if let Ok(key) = self.keys.try_complete(candidate) {
-                let (send_key, receive_key) = derive_send_request_keys(
-                    key,
+                return MycelinkChannel::open_responder_initiator(
+                    &key,
                     self.keys.initiate_public_key(),
                     self.keys.answer_public_key(),
-                    self.kdf,
-                );
-
-                return MycelinkChannel::open_responder_initiator(
-                    send_key,
-                    receive_key,
                     self.kdf,
                     fcp_connector,
                 )
@@ -74,28 +68,6 @@ impl MycelinkChannelRequest {
             },
         )
     }
-}
-
-fn derive_send_request_keys(
-    material: KeyMaterial,
-    sender_public_key: PublicEncryptionKey,
-    recipient_public_key: PublicEncryptionKey,
-    kdf: KdfProviderTag,
-) -> (KeyMaterial, KeyMaterial) {
-    let send_key = kdf.as_provider().derive_key(
-        &material,
-        &format!("Mycelink open-channel {}", hex::encode(sender_public_key)),
-    );
-
-    let receive_key = kdf.as_provider().derive_key(
-        &material,
-        &format!(
-            "Mycelink open-channel {}",
-            hex::encode(recipient_public_key)
-        ),
-    );
-
-    (send_key, receive_key)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -151,15 +123,14 @@ impl PendingMycelinkChannelRequest {
         &self,
         fcp_connector: &FCPConnector,
     ) -> Result<MycelinkChannel, OpenChannelError> {
-        let (send_key, receive_key) = derive_send_request_keys(
-            self.shared_secret.clone(),
+        MycelinkChannel::open_initiator_responder(
+            &self.shared_secret,
             self.exchange.answer_public_key(),
             self.exchange.initiate_public_key(),
             self.kdf,
-        );
-
-        MycelinkChannel::open_initiator_responder(send_key, receive_key, self.kdf, fcp_connector)
-            .await
+            fcp_connector,
+        )
+        .await
     }
 }
 

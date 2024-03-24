@@ -9,6 +9,7 @@ use crate::crypto::symmetrical_providers::{
 };
 use crate::fcp_tools::fcp_get::{fcp_get_inline, FcpGetError};
 use crate::fcp_tools::fcp_put::{fcp_put_inline, FcpPutError};
+use crate::model::keys::PublicEncryptionKey;
 use crate::model::tagged_key_exchange::TaggedInitiateKeyExchange;
 use crate::model::tagged_keypair::TaggedEncryptionKeyPair;
 use crate::model::tagged_secret_box::TaggedSecretBox;
@@ -57,15 +58,29 @@ pub struct MycelinkChannel {
 
 impl MycelinkChannel {
     fn new(
-        send_secret: KeyMaterial,
-        receive_secret: KeyMaterial,
+        common_secret: &KeyMaterial,
+        own_public_key: PublicEncryptionKey,
+        recipient_public_key: PublicEncryptionKey,
         role: MycelinkChannelRole,
         kdf: KdfProviderTag,
         pending_keys: Vec<TaggedEncryptionKeyPair>,
         pending_rekey: Box<[TaggedInitiateKeyExchange]>,
     ) -> Self {
-        let send_ratchet = Ratchet::new(send_secret, kdf);
-        let receive_ratchet = Ratchet::new(receive_secret, kdf);
+        let send_key = kdf.as_provider().derive_key(
+            common_secret,
+            &format!("Mycelink open-channel {}", hex::encode(own_public_key)),
+        );
+
+        let receive_key = kdf.as_provider().derive_key(
+            common_secret,
+            &format!(
+                "Mycelink open-channel {}",
+                hex::encode(recipient_public_key)
+            ),
+        );
+
+        let send_ratchet = Ratchet::new(send_key, kdf);
+        let receive_ratchet = Ratchet::new(receive_key, kdf);
 
         MycelinkChannel {
             role,
@@ -77,14 +92,16 @@ impl MycelinkChannel {
     }
 
     pub async fn open_initiator_responder(
-        send_secret: KeyMaterial,
-        receive_secret: KeyMaterial,
+        common_secret: &KeyMaterial,
+        own_public_key: PublicEncryptionKey,
+        recipient_public_key: PublicEncryptionKey,
         kdf: KdfProviderTag,
         fcp_connector: &FCPConnector,
     ) -> Result<MycelinkChannel, OpenChannelError> {
         let mut channel = Self::new(
-            send_secret,
-            receive_secret,
+            common_secret,
+            own_public_key,
+            recipient_public_key,
             MycelinkChannelRole::Responder,
             kdf,
             vec![],
@@ -99,8 +116,9 @@ impl MycelinkChannel {
     }
 
     pub async fn open_responder_initiator(
-        send_secret: KeyMaterial,
-        receive_secret: KeyMaterial,
+        common_secret: &KeyMaterial,
+        own_public_key: PublicEncryptionKey,
+        recipient_public_key: PublicEncryptionKey,
         kdf: KdfProviderTag,
         fcp_connector: &FCPConnector,
     ) -> Result<Self, OpenChannelError> {
@@ -115,8 +133,9 @@ impl MycelinkChannel {
         };
 
         let mut channel = Self::new(
-            send_secret,
-            receive_secret,
+            common_secret,
+            own_public_key,
+            recipient_public_key,
             MycelinkChannelRole::Initiator,
             kdf,
             pending_keys,

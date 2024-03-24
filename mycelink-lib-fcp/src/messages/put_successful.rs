@@ -18,8 +18,12 @@ impl TryFrom<Message> for PutSuccessfulMessage {
             .expect_specific_node_message(NodeMessageType::PutSuccessful)?;
 
         Ok(Self {
-            identifier: value.fields().get("Identifier")?.value().try_into()?,
-            uri: value.fields().get("URI")?.value().try_into()?,
+            identifier: value
+                .fields()
+                .get_or_err("Identifier")?
+                .value()
+                .try_into()?,
+            uri: value.fields().get_or_err("URI")?.value().try_into()?,
         })
     }
 }

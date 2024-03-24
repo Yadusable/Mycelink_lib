@@ -11,6 +11,7 @@ pub const DATA_LIT: &str = "Data";
 
 const PAYLOAD_LENGTH_HINT_KEYS: &[&str] = &["DataLength"];
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Fields {
     fields: Vec<Field>,
 }
@@ -20,11 +21,12 @@ impl Fields {
         self.fields.iter()
     }
 
-    pub fn get(&self, key: &str) -> Result<&Field, DecodeError> {
-        self.fields
-            .iter()
-            .find(|e| &*e.key == key)
-            .ok_or(DecodeError::MissingField(key.into()))
+    pub fn get(&self, key: &str) -> Option<&Field> {
+        self.fields.iter().find(|e| &*e.key == key)
+    }
+
+    pub fn get_or_err(&self, key: &str) -> Result<&Field, DecodeError> {
+        self.get(key).ok_or(DecodeError::MissingField(key.into()))
     }
 
     pub fn get_payload_size_hint(&self) -> Result<&Field, DecodeError> {
@@ -68,6 +70,7 @@ impl Fields {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Field {
     key: Cow<'static, str>,
     value: Box<str>,

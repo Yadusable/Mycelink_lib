@@ -43,6 +43,8 @@ impl From<&ClientPutMessage> for Message {
             Field::new("UploadFrom".into(), (&value.upload_from).into()),
             Field::new("BinaryBlob".into(), value.is_binary_blob.to_string().into()),
             Field::new("RealTimeFlag".into(), value.real_time.to_string().into()),
+            #[cfg(feature = "local_only")]
+            Field::new("LocalRequestOnly".into(), true.to_string().into()),
         ];
 
         if let Some(content_type) = &value.content_type {

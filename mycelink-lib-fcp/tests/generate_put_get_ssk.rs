@@ -3,8 +3,10 @@ use mycelink_lib_fcp::messages::client_get::ClientGetMessage;
 use mycelink_lib_fcp::messages::client_hello::{ClientHelloMessage, EXPECTED_VERSION};
 use mycelink_lib_fcp::messages::client_put::ClientPutMessage;
 use mycelink_lib_fcp::messages::data_found::DataFoundMessage;
+use mycelink_lib_fcp::messages::generate_ssk::GenerateSSKMessage;
 use mycelink_lib_fcp::messages::node_hello::NodeHelloMessage;
 use mycelink_lib_fcp::messages::put_successful::PutSuccessfulMessage;
+use mycelink_lib_fcp::messages::ssk_keypair::SSKKeypairMessage;
 use mycelink_lib_fcp::messages::uri_generated::UriGeneratedMessage;
 use mycelink_lib_fcp::model::fcp_version::FCPVersion;
 use mycelink_lib_fcp::model::message::{FCPEncodable, Message};
@@ -16,11 +18,12 @@ use mycelink_lib_fcp::model::upload_type::UploadType;
 use mycelink_lib_fcp::model::verbosity::Verbosity;
 use mycelink_lib_fcp::peekable_reader::PeekableReader;
 use rand::RngCore;
+use std::ops::Deref;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 
 #[tokio::test]
-async fn integration_put_get() {
+async fn integration_generate_put_get_ssk() {
     let mut stream = TcpStream::connect("localhost:9481").await.unwrap();
 
     // Handshake
@@ -28,7 +31,7 @@ async fn integration_put_get() {
 
     let client_hello = ClientHelloMessage {
         version: EXPECTED_VERSION,
-        name: "Integration_test_put_get".into(),
+        name: "Integration_test_generate_put_get_ssk".into(),
     };
 
     let encoded = client_hello.to_message().encode();
@@ -51,13 +54,26 @@ async fn integration_put_get() {
         }
     );
 
+    // Generate
+    // #############################################################################################
+    let generate_ssk_identifier = UniqueIdentifier::new("Generate Test");
+    let generate_ssk = GenerateSSKMessage {
+        identifier: generate_ssk_identifier,
+    };
+    let encoded = generate_ssk.to_message().encode();
+
+    tx.write_all(encoded.as_slice()).await.unwrap();
+
+    let message = Message::decode(&mut peekable_reader).await.unwrap();
+    let ssk_keypair: SSKKeypairMessage = message.try_into().unwrap();
+
     // Put
     // #############################################################################################
     let client_put_identifier = UniqueIdentifier::new("Put Test");
     let mut payload_bytes = [0; 128];
     rand::thread_rng().fill_bytes(&mut payload_bytes);
     let client_put = ClientPutMessage {
-        uri: "CHK@".try_into().unwrap(),
+        uri: ssk_keypair.insert_uri.deref().try_into().unwrap(),
         content_type: None,
         identifier: client_put_identifier.clone(),
         verbosity: Verbosity {
@@ -92,6 +108,10 @@ async fn integration_put_get() {
     let put_sucessful: PutSuccessfulMessage = message.try_into().unwrap();
 
     assert_eq!(generated_uri_message.uri, put_sucessful.uri);
+    assert_eq!(
+        generated_uri_message.uri,
+        ssk_keypair.request_uri.deref().try_into().unwrap()
+    );
     assert_eq!(put_sucessful.identifier, client_put_identifier);
 
     // Get
@@ -99,7 +119,7 @@ async fn integration_put_get() {
     let client_get_identifier = UniqueIdentifier::new("Get Message");
     let client_get_message = ClientGetMessage {
         identifier: client_get_identifier.clone(),
-        uri: generated_uri_message.uri,
+        uri: ssk_keypair.request_uri.deref().try_into().unwrap(),
         verbosity: Verbosity {
             simple_progress: false,
             sending_to_network: false,

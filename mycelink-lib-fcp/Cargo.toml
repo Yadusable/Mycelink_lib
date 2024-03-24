@@ -3,12 +3,14 @@ name = "mycelink-lib-fcp"
 version = "0.1.0"
 edition = "2021"
 
-
+[features]
+local_only = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1.33", features = ["io-util"] }
+log = "0.4.20"
+tokio = { version = "1.33", features = ["io-util", "net"] }
 pin-project-lite = "0.2"
 rand = "0.8.5"
 base64 = "0.21.5"

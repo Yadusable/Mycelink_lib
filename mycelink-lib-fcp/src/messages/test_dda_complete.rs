@@ -18,9 +18,9 @@ impl TryFrom<Message> for TestDDACompleteMessage {
             .expect_specific_node_message(NodeMessageType::TestDDAComplete)?;
 
         Ok(Self {
-            directory: PathBuf::from(value.fields().get("Directory")?.value()).into(),
-            read_filename: value.fields().get("ReadFilename")?.value().into(),
-            write_filename: value.fields().get("WriteFilename")?.value().into(),
+            directory: PathBuf::from(value.fields().get_or_err("Directory")?.value()).into(),
+            read_filename: value.fields().get_or_err("ReadFilename")?.value().into(),
+            write_filename: value.fields().get_or_err("WriteFilename")?.value().into(),
         })
     }
 }

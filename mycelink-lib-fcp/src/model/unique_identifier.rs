@@ -2,6 +2,7 @@ use crate::decode_error::DecodeError;
 use crate::decode_error::DecodeError::ParseError;
 use base64::Engine;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 const PREFIX: &str = "[Mycelink] ";
 const NAME_NONCE_SEPARATOR: &str = " - ";
@@ -35,6 +36,14 @@ impl From<&UniqueIdentifier> for Box<str> {
         builder.push_str(&value.nonce);
 
         builder.into_boxed_str()
+    }
+}
+
+impl FromStr for UniqueIdentifier {
+    type Err = DecodeError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::try_from(s)
     }
 }
 

@@ -16,10 +16,14 @@ use crate::model::tagged_secret_box::TaggedSecretBox;
 use crate::mycelink::compressed_box::{CompressedBox, CompressionHint};
 use crate::mycelink::mycelink_channel_message::{InitialChannelMessage, MycelinkChannelMessage};
 use crate::mycelink::mycelink_channel_request::OpenChannelError;
+use crate::mycelink::mycelink_chat_message::{
+    MycelinkChatMessage, MycelinkChatMessageId, MycelinkChatMessageType,
+};
 use crate::mycelink::mycelink_ratchet_key_generator::MycelinkRatchetKeyGenerator;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use mycelink_lib_fcp::model::priority_class::PriorityClass;
 use serde::{Deserialize, Serialize};
+use std::time::UNIX_EPOCH;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MycelinkChannelRole {
@@ -175,6 +179,23 @@ impl MycelinkChannel {
         Ok(())
     }
 
+    pub async fn send_message(
+        &mut self,
+        message: MycelinkChatMessageType,
+        fcp_connector: &FCPConnector,
+    ) -> Result<MycelinkChatMessageId, FcpPutError> {
+        let message_id = MycelinkChatMessageId::new();
+        let message = MycelinkChatMessage::new(
+            UNIX_EPOCH.elapsed().unwrap().as_secs(),
+            message_id.clone(),
+            message,
+        );
+
+        self.send(&message, message.compression_hint(), fcp_connector)
+            .await
+            .map(|_| message_id)
+    }
+
     async fn try_receive<T: for<'de> Deserialize<'de>>(
         &mut self,
         fcp_connector: &FCPConnector,
@@ -236,6 +257,9 @@ mod tests {
     use crate::crypto::key_exchange_providers::DefaultAsymmetricEncryptionProvider;
     use crate::mycelink::mycelink_channel::MycelinkChannel;
     use crate::mycelink::mycelink_channel_request::MycelinkChannelRequest;
+    use crate::mycelink::mycelink_chat_message::{
+        MycelinkChatMessage, MycelinkChatMessageContent, MycelinkChatMessageType,
+    };
     use crate::test::create_test_fcp_connector;
     use mycelink_lib_fcp::fcp_connector::FCPConnector;
 
@@ -246,12 +270,12 @@ mod tests {
         let (incoming_request, pending_request) =
             MycelinkChannelRequest::create(public_responder_static_key.into());
 
-        let channel_receiver = incoming_request
+        let channel_initiator = incoming_request
             .accept(&[&private_responder_static_keys.into()], fcp_connector)
             .await
             .unwrap();
 
-        let channel_initiator = pending_request.check(fcp_connector).await.unwrap();
+        let channel_receiver = pending_request.check(fcp_connector).await.unwrap();
 
         (channel_initiator, channel_receiver)
     }
@@ -274,10 +298,29 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_sending_channel_messages() {
+    async fn test_sending_channel_messages_initiator() {
         let _ = env_logger::try_init();
-        let fcp_connector = create_test_fcp_connector("test_sending_channel_messages").await;
+        let fcp_connector =
+            create_test_fcp_connector("test_sending_channel_messages_initiator").await;
 
-        let (channel_initiator, channel_receiver) = open_channel(&fcp_connector).await;
+        let (mut channel_initiator, mut channel_receiver) = open_channel(&fcp_connector).await;
+
+        let message = MycelinkChatMessageType::Standard {
+            content: MycelinkChatMessageContent::Text("Hello World".into()),
+        };
+
+        channel_initiator
+            .send_message(message.clone(), &fcp_connector)
+            .await
+            .unwrap();
+
+        let received_message = channel_receiver
+            .try_receive_message(&fcp_connector)
+            .await
+            .unwrap();
+
+        let received_message: &MycelinkChatMessage = (&received_message).try_into().unwrap();
+
+        assert_eq!(received_message.message_type(), &message)
     }
 }

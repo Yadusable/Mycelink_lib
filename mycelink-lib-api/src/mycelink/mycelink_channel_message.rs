@@ -2,7 +2,7 @@ use crate::model::tagged_key_exchange::{TaggedAnswerKeyExchange, TaggedInitiateK
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct InitialResponderChannelMessage {
+pub struct InitialChannelMessage {
     pub available_public_component: Box<[TaggedInitiateKeyExchange]>,
 }
 

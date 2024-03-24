@@ -12,6 +12,17 @@ use crate::mycelink::mycelink_channel::{MycelinkChannel, ReceiveMessageError};
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use serde::{Deserialize, Serialize};
 
+/// Basic Structure for creating a new [MycelinkChannel]
+///
+/// The workflow of opening a new channel between two parties (Alice, Bob) is a follows:
+/// 1: Alice receives Bobs public key over a third channel.
+/// 2: Alice creates a [MycelinkChannelRequest] with a new ephemeral key, signs it with her publicly known public key and encrypts the request with Bob's public key.
+/// 3: Alice uploads the signed and encrypted request to a location know to Bob.
+/// 4. Bob receives the request, decrypts it and then verifies the signature.
+/// 5. If Bob accepts the request, he uses Alice's ephemeral public key and his static public key to create a new [MycelinkChannel] an Initiator
+/// 6: Alice uses Bobs public key and her ephemeral key to receive the new [MycelinkChannel] as the Responder
+///
+/// This exchange is secure only if Alice can trust Bob's public key and Bob trusts Alice's signing key.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MycelinkChannelRequest {
     keys: TaggedAnswerKeyExchange,
@@ -33,7 +44,7 @@ impl MycelinkChannelRequest {
                     self.kdf,
                 );
 
-                return MycelinkChannel::open_responder(
+                return MycelinkChannel::open_responder_initiator(
                     send_key,
                     receive_key,
                     self.kdf,
@@ -147,7 +158,8 @@ impl PendingMycelinkChannelRequest {
             self.kdf,
         );
 
-        MycelinkChannel::open_initiator(send_key, receive_key, self.kdf, fcp_connector).await
+        MycelinkChannel::open_initiator_responder(send_key, receive_key, self.kdf, fcp_connector)
+            .await
     }
 }
 

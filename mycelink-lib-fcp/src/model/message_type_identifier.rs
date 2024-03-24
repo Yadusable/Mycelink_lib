@@ -1,11 +1,13 @@
 use crate::decode_error::DecodeError;
 use crate::decode_error::DecodeError::UnexpectedEOF;
 use crate::model::message_type_identifier::ClientMessageType::{
-    ClientGet, ClientHello, ClientPut, GenerateSSK, ListPeer, TestDDARequest, TestDDAResponse,
+    ClientGet, ClientHello, ClientPut, GenerateSSK, ListPeer, SubscribeUSK, TestDDARequest,
+    TestDDAResponse,
 };
 use crate::model::message_type_identifier::MessageType::{Client, Node};
 use crate::model::message_type_identifier::NodeMessageType::{
     AllData, DataFound, GetFailed, NodeHello, ProtocolError, PutFailed, PutSuccessful, SSKKeypair,
+    SubscribedUSK, SubscribedUSKRoundFinished, SubscribedUSKSendingToNetwork, SubscribedUSKUpdate,
     TestDDAComplete, TestDDAReply, URIGenerated,
 };
 use crate::peekable_reader::Peeker;
@@ -20,6 +22,7 @@ pub const CLIENT_MESSAGE_TYPES: &[ClientMessageType] = &[
     GenerateSSK,
     TestDDARequest,
     TestDDAResponse,
+    SubscribeUSK,
 ];
 pub const NODE_MESSAGE_TYPES: &[NodeMessageType] = &[
     NodeHello,
@@ -33,6 +36,10 @@ pub const NODE_MESSAGE_TYPES: &[NodeMessageType] = &[
     TestDDAComplete,
     DataFound,
     ProtocolError,
+    SubscribedUSK,
+    SubscribedUSKUpdate,
+    SubscribedUSKSendingToNetwork,
+    SubscribedUSKRoundFinished,
 ];
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -44,6 +51,7 @@ pub enum ClientMessageType {
     GenerateSSK,
     TestDDARequest,
     TestDDAResponse,
+    SubscribeUSK,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -59,6 +67,10 @@ pub enum NodeMessageType {
     TestDDAComplete,
     DataFound,
     ProtocolError,
+    SubscribedUSK,
+    SubscribedUSKUpdate,
+    SubscribedUSKSendingToNetwork,
+    SubscribedUSKRoundFinished,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -82,6 +94,10 @@ impl NodeMessageType {
             PutFailed => "PutFailed",
             GetFailed => "GetFailed",
             ProtocolError => "ProtocolError",
+            SubscribedUSK => "SubscribedUSK",
+            SubscribedUSKUpdate => "SubscribedUSKUpdate",
+            SubscribedUSKSendingToNetwork => "SubscribedUSKSendingToNetwork",
+            SubscribedUSKRoundFinished => "SubscribedUSKRoundFinished",
         }
     }
 }
@@ -97,6 +113,7 @@ impl ClientMessageType {
             GenerateSSK => "GenerateSSK",
             TestDDARequest => "TestDDARequest",
             TestDDAResponse => "TestDDAResponse",
+            SubscribeUSK => "SubscribeUSK",
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::model::asymmetric_keys::{PublicEncryptionKey, PublicSigningKey};
+use crate::model::keys::{PublicEncryptionKey, PublicSigningKey};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -12,7 +12,6 @@ pub enum PublicConnectionDetails {
 pub struct PublicMycelinkConnectionDetails {
     account_request_key: Box<str>,
     display_name: Box<str>,
-
     public_signing_key: PublicSigningKey,
     public_encryption_key: PublicEncryptionKey,
 }

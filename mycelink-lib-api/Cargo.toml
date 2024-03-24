@@ -7,21 +7,28 @@ edition = "2021"
 
 [dev-dependencies]
 tokio = { version = "1.36", features = ["rt", "macros", "net"] }
-env_logger = "0.11.2"
+env_logger = "0.11"
 
 [dependencies]
 mycelink-lib-fcp = { path = "../mycelink-lib-fcp" }
 
 anyhow = "1.0"
-base64 = "0.21"
-blake3 = "1.5"
-ed25519-dalek = "2.1"
-hex = { version = "0.4.3", features = ["serde"] }
 log = "0.4.20"
 mime = "0.3"
-rand = "0.8"
+
+base64 = "0.22"
+hex = { version = "0.4.3", features = ["serde"] }
+ciborium = "0.2.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sqlx = { version = "0.7.3", features = ["runtime-tokio-rustls", "sqlite"] }
+
 tokio = { version = "1.36", features = ["sync", "macros"] }
-x25519-dalek = { version = "2.0", features = ["static_secrets"] }
+
+rand = "0.8"
+sha2 = "0.10"
+hkdf = "0.12"
+blake3 = "1.5"
+chacha20poly1305 = "0.10"
+ed25519-dalek = { version = "2.1", features = ["rand_core", "digest"] }
+x25519-dalek = { version = "2.0", features = ["static_secrets", "getrandom"] }

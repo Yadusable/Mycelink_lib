@@ -49,4 +49,8 @@ impl Ratchet {
 
         Ok(ratchet.current_key(purpose))
     }
+
+    pub fn current_iteration(&self) -> u32 {
+        self.current_iteration
+    }
 }

@@ -9,7 +9,7 @@ pub struct InitialChannelMessage {
     pub available_public_component: Box<[TaggedInitiateKeyExchange]>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MycelinkChannelMessage {
     GroupChatRekey {
         //TODO
@@ -18,6 +18,8 @@ pub enum MycelinkChannelMessage {
         new_key: TaggedAnswerKeyExchange,
         new_kdf: KdfProviderTag,
         next_public_components: Box<[TaggedInitiateKeyExchange]>,
+
+        attached_message: Box<MycelinkChannelMessage>,
     },
     DirectMessage(MycelinkChatMessage),
 }

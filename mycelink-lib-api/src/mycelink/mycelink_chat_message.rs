@@ -2,7 +2,7 @@ use crate::mycelink::compressed_box::{CompressionHint, CompressionHinting};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MycelinkChatMessage {
     timestamp: u64,
     id: MycelinkChatMessageId,

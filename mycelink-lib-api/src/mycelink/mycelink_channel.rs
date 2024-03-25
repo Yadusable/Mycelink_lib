@@ -14,6 +14,7 @@ use crate::model::tagged_key_exchange::TaggedInitiateKeyExchange;
 use crate::model::tagged_keypair::TaggedEncryptionKeyPair;
 use crate::model::tagged_secret_box::TaggedSecretBox;
 use crate::mycelink::compressed_box::{CompressedBox, CompressionHint, CompressionHinting};
+use crate::mycelink::mycelink_channel::ReceiveMessageError::{FailedRekey, NotInitialized};
 use crate::mycelink::mycelink_channel_message::MycelinkChannelMessage::FinalMessage;
 use crate::mycelink::mycelink_channel_message::{InitialChannelMessage, MycelinkChannelMessage};
 use crate::mycelink::mycelink_chat_message::{
@@ -21,6 +22,7 @@ use crate::mycelink::mycelink_chat_message::{
 };
 use crate::mycelink::mycelink_ratchet_key_generator::MycelinkRatchetKeyGenerator;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
+use mycelink_lib_fcp::messages::get_failed::DATA_NOT_FOUND_CODE;
 use mycelink_lib_fcp::model::priority_class::PriorityClass;
 use serde::{Deserialize, Serialize};
 use std::cmp::max_by;
@@ -138,10 +140,14 @@ impl MycelinkChannel {
         message: &MycelinkChannelMessage,
         fcp_connector: &FCPConnector,
     ) -> Result<(), FcpPutError> {
-        self.send(message, message.compression_hint(), fcp_connector)
-            .await?;
+        let rekeyed = self.rekey_send_if_possible(message, fcp_connector).await?;
 
-        self.rekey_if_possible(fcp_connector).await?;
+        // If rekey_send wasn't possible, send message without rekeying
+        if !rekeyed {
+            self.send(message, message.compression_hint(), fcp_connector)
+                .await?;
+        }
+
         Ok(())
     }
 
@@ -164,8 +170,9 @@ impl MycelinkChannel {
             .map(|_| message_id)
     }
 
-    async fn rekey_if_possible(
+    async fn rekey_send_if_possible(
         &mut self,
+        attached_message: &MycelinkChannelMessage,
         fcp_connector: &FCPConnector,
     ) -> Result<bool, FcpPutError> {
         if let Some(pending_public_components) = &self.pending_public_components {
@@ -180,19 +187,22 @@ impl MycelinkChannel {
                 let (next_public_components, next_private_components) = Self::prepare_rekey();
                 let new_kdf = KdfProviderTag::default();
 
-                let final_message = MycelinkChannelMessage::FinalMessage {
+                let final_message = FinalMessage {
                     new_key: answer,
                     next_public_components: next_public_components.into(),
                     new_kdf,
+
+                    attached_message: attached_message.clone().into(),
                 };
 
+                log::debug!("Send Final Message message");
                 self.send(
                     &final_message,
                     final_message.compression_hint(),
                     fcp_connector,
                 )
                 .await?;
-
+                log::info!("Rekeyed send ratchet");
                 self.own_private_component
                     .push(next_private_components.into());
                 self.send_ratchet = Ratchet::new(new_secret, new_kdf);
@@ -206,7 +216,7 @@ impl MycelinkChannel {
     async fn try_receive<T: for<'de> Deserialize<'de>>(
         &mut self,
         fcp_connector: &FCPConnector,
-    ) -> Result<T, ReceiveMessageError> {
+    ) -> Result<Option<T>, ReceiveMessageError> {
         let ksk = self.receive_ratchet.generate_send_message_ksk();
         let message = fcp_get_inline(
             ksk,
@@ -214,7 +224,16 @@ impl MycelinkChannel {
             "Receive Mycelink Message",
             PriorityClass::High,
         )
-        .await?;
+        .await;
+
+        if let Err(FcpGetError::GetFailed { inner }) = &message {
+            if inner.code == DATA_NOT_FOUND_CODE {
+                return Ok(None);
+            }
+        }
+
+        let message = message?;
+
         let decryption_key = self.receive_ratchet.generate_message_encryption_key();
         self.receive_ratchet.advance();
 
@@ -222,14 +241,17 @@ impl MycelinkChannel {
         let compressed: CompressedBox = secret_box.try_decrypt(decryption_key)?;
         let original: T = compressed.open()?;
 
-        Ok(original)
+        Ok(Some(original))
     }
 
     pub async fn try_receive_initial_message(
         &mut self,
         fcp_connector: &FCPConnector,
     ) -> Result<(), ReceiveMessageError> {
-        let initial_message: InitialChannelMessage = self.try_receive(fcp_connector).await?;
+        let initial_message: InitialChannelMessage = self
+            .try_receive(fcp_connector)
+            .await?
+            .ok_or(NotInitialized)?;
         self.received_initial_message = true;
         self.pending_public_components = Some(initial_message.available_public_component);
         Ok(())
@@ -239,34 +261,40 @@ impl MycelinkChannel {
         &mut self,
         fcp_connector: &FCPConnector,
     ) -> Result<Option<MycelinkChannelMessage>, ReceiveMessageError> {
-        loop {
-            if !self.received_initial_message {
-                self.try_receive_initial_message(fcp_connector).await?;
-            }
+        if !self.received_initial_message {
+            self.try_receive_initial_message(fcp_connector).await?;
+        }
 
-            let message = self.try_receive(fcp_connector).await?;
+        match self.try_receive(fcp_connector).await? {
+            Some(message) => {
+                if let FinalMessage {
+                    new_key,
+                    new_kdf,
+                    next_public_components,
+                    attached_message,
+                } = message
+                {
+                    log::debug!("Received Final Message message");
+                    for i in 0..self.own_private_component.len() {
+                        let material =
+                            new_key.try_complete_multiple(&self.own_private_component[i]);
+                        if material.is_err() {
+                            continue;
+                        }
 
-            if let FinalMessage {
-                new_key,
-                new_kdf,
-                next_public_components,
-            } = message
-            {
-                for i in 0..self.own_private_component.len() {
-                    let material = new_key.try_complete_multiple(&self.own_private_component[i]);
-                    if material.is_err() {
-                        continue;
+                        log::info!("Rekeyed receive ratchet");
+                        self.receive_ratchet = Ratchet::new(material.unwrap(), new_kdf);
+                        self.pending_public_components = Some(next_public_components);
+
+                        self.own_private_component.drain(0..i);
+                        return Ok(Some(*attached_message));
                     }
-
-                    self.receive_ratchet = Ratchet::new(material.unwrap(), new_kdf);
-                    self.pending_public_components = Some(next_public_components);
-
-                    self.own_private_component.drain(0..i);
-                    break;
+                    Err(FailedRekey)
+                } else {
+                    Ok(Some(message))
                 }
-            } else {
-                return Ok(Some(message));
             }
+            None => Ok(None),
         }
     }
 }
@@ -276,6 +304,8 @@ pub enum ReceiveMessageError {
     SecretBox(SecretBoxError),
     Deserialize(ciborium::de::Error<std::io::Error>),
     FcpGet(FcpGetError),
+    NotInitialized,
+    FailedRekey,
 }
 
 impl From<SecretBoxError> for ReceiveMessageError {
@@ -305,6 +335,7 @@ mod tests {
     use crate::fcp_tools::fcp_put::FcpPutError;
     use crate::model::tagged_key_exchange::TaggedAnswerKeyExchange;
     use crate::mycelink::mycelink_channel::MycelinkChannel;
+    use crate::mycelink::mycelink_channel_message::MycelinkChannelMessage;
     use crate::mycelink::mycelink_chat_message::{
         MycelinkChatMessage, MycelinkChatMessageContent, MycelinkChatMessageType,
     };
@@ -391,7 +422,7 @@ mod tests {
             .unwrap();
 
         let received_message: &MycelinkChatMessage =
-            (&received_message).as_ref().unwrap().try_into().unwrap();
+            received_message.as_ref().unwrap().try_into().unwrap();
 
         assert_eq!(received_message.message_type(), &message)
     }
@@ -423,5 +454,84 @@ mod tests {
             received_message.as_ref().unwrap().try_into().unwrap();
 
         assert_eq!(received_message.message_type(), &message);
+    }
+
+    #[tokio::test]
+    async fn test_sending_rekeys() {
+        let _ = env_logger::try_init();
+        let fcp_connector = create_test_fcp_connector("test_sending_rekeys").await;
+
+        let (mut channel_a, mut channel_b) = open_channel(&fcp_connector).await.unwrap();
+
+        // Ensure a has b public components
+        assert!(channel_a
+            .try_receive_message(&fcp_connector)
+            .await
+            .unwrap()
+            .is_none());
+
+        // Send a message
+        channel_a
+            .send_chat_message(
+                MycelinkChatMessageType::Standard {
+                    content: MycelinkChatMessageContent::Text("Hello World".into()),
+                },
+                &fcp_connector,
+            )
+            .await
+            .unwrap();
+
+        // if a has rekeyed, its ratchet should be reset
+        assert_eq!(channel_a.send_ratchet.current_iteration(), 0);
+
+        // send message with new key
+        channel_a
+            .send_chat_message(
+                MycelinkChatMessageType::Standard {
+                    content: MycelinkChatMessageContent::Text("Hello World 2".into()),
+                },
+                &fcp_connector,
+            )
+            .await
+            .unwrap();
+
+        // as a has no new public components it should not be able to rekey
+        assert_eq!(channel_a.send_ratchet.current_iteration(), 1);
+
+        if let MycelinkChannelMessage::DirectMessage(message) = channel_b
+            .try_receive_message(&fcp_connector)
+            .await
+            .unwrap()
+            .unwrap()
+        {
+            if let MycelinkChatMessageType::Standard {
+                content: MycelinkChatMessageContent::Text(text),
+            } = message.message_type()
+            {
+                assert_eq!(&**text, "Hello World")
+            } else {
+                panic!()
+            }
+        } else {
+            panic!()
+        }
+
+        if let MycelinkChannelMessage::DirectMessage(message) = channel_b
+            .try_receive_message(&fcp_connector)
+            .await
+            .unwrap()
+            .unwrap()
+        {
+            if let MycelinkChatMessageType::Standard {
+                content: MycelinkChatMessageContent::Text(text),
+            } = message.message_type()
+            {
+                assert_eq!(&**text, "Hello World 2")
+            } else {
+                panic!()
+            }
+        } else {
+            panic!()
+        }
     }
 }

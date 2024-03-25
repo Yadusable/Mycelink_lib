@@ -5,18 +5,20 @@ use crate::model::message_type_identifier::NodeMessageType::GetFailed;
 use crate::model::unique_identifier::UniqueIdentifier;
 use crate::model::uri::URI;
 
+pub const DATA_NOT_FOUND_CODE: u32 = 13;
+
 #[derive(Debug)]
 pub struct GetFailedMessage {
     pub code: u32,
     pub identifier: UniqueIdentifier,
     pub code_description: Box<str>,
     pub short_code_description: Box<str>,
-    pub extra_description: Box<str>,
+    pub extra_description: Option<Box<str>>,
     pub fatal: bool,
     pub redirect_uri: Option<URI>,
     pub expected_data_length: Option<usize>,
     pub expected_metadata_content_type: Option<ContentType>,
-    pub finalized_expected: bool,
+    pub finalized_expected: Option<bool>,
 }
 
 impl TryFrom<Message> for GetFailedMessage {
@@ -38,9 +40,8 @@ impl TryFrom<Message> for GetFailedMessage {
                 .into(),
             extra_description: value
                 .fields()
-                .get_or_err("ExtraDescription")?
-                .value()
-                .into(),
+                .get("ExtraDescription")
+                .map(|e| e.value().into()),
             fatal: value.fields().get_or_err("Fatal")?.value().parse()?,
             redirect_uri: match value.fields().get("RedirectURI") {
                 None => None,
@@ -57,9 +58,8 @@ impl TryFrom<Message> for GetFailedMessage {
             },
             finalized_expected: value
                 .fields()
-                .get_or_err("FinalizedExpected")?
-                .value()
-                .parse()?,
+                .get("FinalizedExpected")
+                .and_then(|e| e.value().parse().ok()),
         })
     }
 }

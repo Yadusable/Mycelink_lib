@@ -15,7 +15,7 @@ pub async fn publish_account(
     let mut encoded = Vec::new();
     ciborium::into_writer(&account.generate_contact_info(display_name), &mut encoded).unwrap();
 
-    fcp_put_inline(encoded.into(), uri, fcp_connector).await?;
+    fcp_put_inline(encoded.into(), uri, fcp_connector, "Publish Account").await?;
 
     Ok(())
 }

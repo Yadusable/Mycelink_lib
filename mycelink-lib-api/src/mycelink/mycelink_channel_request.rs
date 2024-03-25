@@ -1,9 +1,8 @@
 use crate::crypto::kdf_provider::KdfProviderTag;
-use crate::crypto::key_material::KeyMaterial;
 use crate::crypto::secret_box::SecretBoxError;
 use crate::crypto::signed_box::SignedBoxError;
 use crate::fcp_tools::fcp_put::FcpPutError;
-use crate::model::keys::{PublicEncryptionKey, PublicSigningKey};
+use crate::model::keys::PublicSigningKey;
 use crate::model::tagged_key_exchange::{TaggedAnswerKeyExchange, TaggedInitiateKeyExchange};
 use crate::model::tagged_keypair::TaggedEncryptionKeyPair;
 use crate::model::tagged_secret_box::TaggedSecretBox;
@@ -35,38 +34,41 @@ impl MycelinkChannelRequest {
         keypair_candidates: &[&TaggedEncryptionKeyPair],
         fcp_connector: &FCPConnector,
     ) -> Result<MycelinkChannel, OpenChannelError> {
-        for candidate in keypair_candidates {
-            if let Ok(key) = self.keys.try_complete(candidate) {
-                return MycelinkChannel::open_responder_initiator(
-                    &key,
-                    self.keys.initiate_public_key(),
-                    self.keys.answer_public_key(),
-                    self.kdf,
-                    fcp_connector,
-                )
-                .await;
-            }
+        if let Ok(key) = self.keys.try_complete_multiple(keypair_candidates) {
+            return Ok(MycelinkChannel::open(
+                &key,
+                self.keys.initiate_public_key(),
+                self.keys.answer_public_key(),
+                self.kdf,
+                fcp_connector,
+            )
+            .await?);
         }
 
         Err(OpenChannelError::NoMatchingKey)
     }
-    pub fn create(
+    pub async fn create(
         responder_public_key: TaggedInitiateKeyExchange,
-    ) -> (Self, PendingMycelinkChannelRequest) {
+        fcp_connector: &FCPConnector,
+    ) -> Result<(Self, MycelinkChannel), OpenChannelError> {
         let (answer, shared_secret) = responder_public_key.answer();
 
         let kdf = KdfProviderTag::default();
-        (
+
+        Ok((
             Self {
                 keys: answer.clone(),
                 kdf,
             },
-            PendingMycelinkChannelRequest {
-                shared_secret,
-                exchange: answer,
+            MycelinkChannel::open(
+                &shared_secret,
+                answer.answer_public_key(),
+                answer.initiate_public_key(),
                 kdf,
-            },
-        )
+                fcp_connector,
+            )
+            .await?,
+        ))
     }
 }
 
@@ -108,29 +110,6 @@ impl EncryptedSignedMycelinkChannelRequest {
             }
         }
         Err(OpenChannelError::NoMatchingKey)
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PendingMycelinkChannelRequest {
-    shared_secret: KeyMaterial,
-    exchange: TaggedAnswerKeyExchange,
-    kdf: KdfProviderTag,
-}
-
-impl PendingMycelinkChannelRequest {
-    pub async fn check(
-        &self,
-        fcp_connector: &FCPConnector,
-    ) -> Result<MycelinkChannel, OpenChannelError> {
-        MycelinkChannel::open_initiator_responder(
-            &self.shared_secret,
-            self.exchange.answer_public_key(),
-            self.exchange.initiate_public_key(),
-            self.kdf,
-            fcp_connector,
-        )
-        .await
     }
 }
 

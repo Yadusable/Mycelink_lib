@@ -1,4 +1,6 @@
+use crate::crypto::kdf_provider::KdfProviderTag;
 use crate::model::tagged_key_exchange::{TaggedAnswerKeyExchange, TaggedInitiateKeyExchange};
+use crate::mycelink::compressed_box::{CompressionHint, CompressionHinting};
 use crate::mycelink::mycelink_chat_message::MycelinkChatMessage;
 use serde::{Deserialize, Serialize};
 
@@ -13,9 +15,21 @@ pub enum MycelinkChannelMessage {
         //TODO
     },
     FinalMessage {
-        answer: TaggedAnswerKeyExchange,
+        new_key: TaggedAnswerKeyExchange,
+        new_kdf: KdfProviderTag,
+        next_public_components: Box<[TaggedInitiateKeyExchange]>,
     },
     DirectMessage(MycelinkChatMessage),
+}
+
+impl CompressionHinting for MycelinkChannelMessage {
+    fn compression_hint(&self) -> CompressionHint {
+        match self {
+            MycelinkChannelMessage::GroupChatRekey { .. } => CompressionHint::Fast,
+            MycelinkChannelMessage::FinalMessage { .. } => CompressionHint::Fast,
+            MycelinkChannelMessage::DirectMessage(inner) => inner.compression_hint(),
+        }
+    }
 }
 
 impl<'a> TryFrom<&'a MycelinkChannelMessage> for &'a MycelinkChatMessage {

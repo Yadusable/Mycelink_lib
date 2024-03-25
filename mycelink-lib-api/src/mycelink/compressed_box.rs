@@ -33,3 +33,7 @@ pub enum CompressionHint {
     Fast,
     High,
 }
+
+pub trait CompressionHinting {
+    fn compression_hint(&self) -> CompressionHint;
+}

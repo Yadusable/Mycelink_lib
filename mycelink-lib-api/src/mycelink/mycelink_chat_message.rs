@@ -1,4 +1,4 @@
-use crate::mycelink::compressed_box::CompressionHint;
+use crate::mycelink::compressed_box::{CompressionHint, CompressionHinting};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
@@ -22,10 +22,6 @@ impl MycelinkChatMessage {
         }
     }
 
-    pub fn compression_hint(&self) -> CompressionHint {
-        self.message_type.compression_hint()
-    }
-
     pub fn timestamp(&self) -> u64 {
         self.timestamp
     }
@@ -34,6 +30,12 @@ impl MycelinkChatMessage {
     }
     pub fn message_type(&self) -> &MycelinkChatMessageType {
         &self.message_type
+    }
+}
+
+impl CompressionHinting for MycelinkChatMessage {
+    fn compression_hint(&self) -> CompressionHint {
+        self.message_type.compression_hint()
     }
 }
 
@@ -52,8 +54,8 @@ pub enum MycelinkChatMessageType {
     },
 }
 
-impl MycelinkChatMessageType {
-    pub fn compression_hint(&self) -> CompressionHint {
+impl CompressionHinting for MycelinkChatMessageType {
+    fn compression_hint(&self) -> CompressionHint {
         match self {
             MycelinkChatMessageType::Standard { content } => content.compression_hint(),
             MycelinkChatMessageType::Reply { content, .. } => content.compression_hint(),
@@ -67,8 +69,8 @@ pub enum MycelinkChatMessageContent {
     Text(Box<str>),
 }
 
-impl MycelinkChatMessageContent {
-    pub fn compression_hint(&self) -> CompressionHint {
+impl CompressionHinting for MycelinkChatMessageContent {
+    fn compression_hint(&self) -> CompressionHint {
         match self {
             MycelinkChatMessageContent::Text(_) => CompressionHint::High,
         }

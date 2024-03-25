@@ -75,7 +75,7 @@ async fn integration_put_get_chk() {
         persistence: Persistence::Connection,
         target_filename: None,
         upload_from: UploadType::Direct {
-            data: payload_bytes.to_vec(),
+            data: payload_bytes.into(),
         },
         is_binary_blob: false,
         real_time: true,
@@ -133,7 +133,7 @@ async fn integration_put_get_chk() {
         AllDataMessage {
             identifier: client_get_identifier,
             content_type: "application/octet-stream".parse().unwrap(),
-            data: payload_bytes.to_vec(),
+            data: payload_bytes.into(),
         }
     )
 }

@@ -20,7 +20,7 @@ impl<P: AsymmetricEncryptionProvider> InitiateKeyExchange<P> {
         (initiate_part, keypair)
     }
 
-    pub fn answer(self) -> (AnswerKeyExchange<P>, CompletedKeyExchange<P>) {
+    pub fn answer(&self) -> (AnswerKeyExchange<P>, CompletedKeyExchange<P>) {
         let keypair = P::generate_encryption_keypair();
 
         let answer = AnswerKeyExchange {
@@ -29,7 +29,7 @@ impl<P: AsymmetricEncryptionProvider> InitiateKeyExchange<P> {
         };
 
         let completed = CompletedKeyExchange {
-            public_component: self.public_key,
+            public_component: self.public_key.clone(),
             private_component: keypair.private_key,
         };
 

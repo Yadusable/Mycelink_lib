@@ -38,7 +38,7 @@ use std::time::UNIX_EPOCH;
 /// 1: Both parties receive some common secret over a prior key exchange
 /// 2: Both parties send a [InitialChannelMessage] with newly generated ephemeral public keys in all supported schemas.
 /// 3: Both parties may send as many non-final [MycelinkChannelMessage] as they like.
-/// 4: Any party should at any point rekey its sending ratchet by sending a [MycelinkChannelMessage::FinalMessage]
+/// 4: Any party can at any point rekey its sending ratchet by sending a [MycelinkChannelMessage::FinalMessage] provided it has unused pending public components from the receiver
 ///
 /// Forward secrecy is provided for following channels, as they are secrets depend on a fully ephemeral key exchange.
 /// Deniability is provided as no messages are signed, meaning that any party able to read or verify any message is also able of forging a message.

@@ -4,5 +4,5 @@ pub mod contact;
 pub mod media;
 pub mod message;
 pub mod message_types;
-pub mod messager_service;
+pub mod messenger_service;
 pub mod tenant;

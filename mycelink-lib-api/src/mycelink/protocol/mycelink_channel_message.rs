@@ -2,8 +2,8 @@ use crate::crypto::kdf_provider::KdfProviderTag;
 use crate::crypto::tagged_types::tagged_key_exchange::{
     TaggedAnswerKeyExchange, TaggedInitiateKeyExchange,
 };
-use crate::mycelink::compressed_box::{CompressionHint, CompressionHinting};
-use crate::mycelink::mycelink_chat_message::MycelinkChatMessage;
+use crate::mycelink::protocol::compressed_box::{CompressionHint, CompressionHinting};
+use crate::mycelink::protocol::mycelink_chat_message::MycelinkChatMessage;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]

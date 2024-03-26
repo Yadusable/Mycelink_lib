@@ -9,7 +9,7 @@ use crate::crypto::tagged_types::tagged_keypair::TaggedEncryptionKeyPair;
 use crate::crypto::tagged_types::tagged_secret_box::TaggedSecretBox;
 use crate::crypto::tagged_types::tagged_signed_box::TaggedSignedBox;
 use crate::fcp_tools::fcp_put::FcpPutError;
-use crate::mycelink::mycelink_channel::{MycelinkChannel, ReceiveMessageError};
+use crate::mycelink::protocol::mycelink_channel::{MycelinkChannel, ReceiveMessageError};
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use serde::{Deserialize, Serialize};
 

@@ -1,4 +1,4 @@
-use crate::mycelink::compressed_box::{CompressionHint, CompressionHinting};
+use crate::mycelink::protocol::compressed_box::{CompressionHint, CompressionHinting};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 

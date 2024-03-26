@@ -13,14 +13,20 @@ use crate::crypto::tagged_types::tagged_keypair::TaggedEncryptionKeyPair;
 use crate::crypto::tagged_types::tagged_secret_box::TaggedSecretBox;
 use crate::fcp_tools::fcp_get::{fcp_get_inline, FcpGetError};
 use crate::fcp_tools::fcp_put::{fcp_put_inline, FcpPutError};
-use crate::mycelink::compressed_box::{CompressedBox, CompressionHint, CompressionHinting};
-use crate::mycelink::mycelink_channel::ReceiveMessageError::{FailedRekey, NotInitialized};
-use crate::mycelink::mycelink_channel_message::MycelinkChannelMessage::FinalMessage;
-use crate::mycelink::mycelink_channel_message::{InitialChannelMessage, MycelinkChannelMessage};
-use crate::mycelink::mycelink_chat_message::{
+use crate::mycelink::protocol::compressed_box::{
+    CompressedBox, CompressionHint, CompressionHinting,
+};
+use crate::mycelink::protocol::mycelink_channel::ReceiveMessageError::{
+    FailedRekey, NotInitialized,
+};
+use crate::mycelink::protocol::mycelink_channel_message::MycelinkChannelMessage::FinalMessage;
+use crate::mycelink::protocol::mycelink_channel_message::{
+    InitialChannelMessage, MycelinkChannelMessage,
+};
+use crate::mycelink::protocol::mycelink_chat_message::{
     MycelinkChatMessage, MycelinkChatMessageId, MycelinkChatMessageType,
 };
-use crate::mycelink::mycelink_ratchet_key_generator::MycelinkRatchetKeyGenerator;
+use crate::mycelink::protocol::mycelink_ratchet_key_generator::MycelinkRatchetKeyGenerator;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use mycelink_lib_fcp::messages::get_failed::DATA_NOT_FOUND_CODE;
 use mycelink_lib_fcp::model::priority_class::PriorityClass;

@@ -1,10 +1,8 @@
 pub mod mycelink_create_account;
 
 use crate::db::db_connector::{DBConnector, NoTenant, TenantState};
-use crate::model::chat::ChatMetadata;
-use crate::model::contact::ContactId;
+use crate::model::contact::Contact;
 use crate::model::media::{Media, MediaId};
-use crate::model::message::Message;
 use crate::model::tenant::Tenant;
 use crate::mycelink::mycelink_account::MycelinkAccount;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
@@ -70,15 +68,11 @@ impl APIConnector<SignedIn, Tenant> {
         todo!()
     }
 
-    pub fn mycelink_friend_request(&self, contact_identifier: &ContactId) {
+    pub fn mycelink_friend_request(&self, contact: Box<dyn Contact>) {
         todo!()
     }
 
     pub fn list_friend_request(&self) -> Box<[Box<str>]> {
-        todo!()
-    }
-
-    pub fn send_message(&self, message: Message, chat: &ChatMetadata) -> Result<(), ()> {
         todo!()
     }
 

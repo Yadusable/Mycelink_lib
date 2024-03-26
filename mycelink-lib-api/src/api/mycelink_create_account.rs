@@ -2,8 +2,8 @@ use crate::api::{APIConnector, LoginStatus};
 use crate::db::actions::mycelink_account_actions::MycelinkAccountEntryError;
 use crate::fcp_tools::generate_ssk::{generate_ssk, GenerateSSKKeypairError};
 use crate::fcp_tools::publish_account::{publish_account, PublishAccountError};
-use crate::model::mycelink_account::MycelinkAccount;
 use crate::model::tenant::Tenant;
+use crate::mycelink::mycelink_account::MycelinkAccount;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 

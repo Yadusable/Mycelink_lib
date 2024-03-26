@@ -1,6 +1,6 @@
 use crate::db::db_connector::{DBConnector, DatabaseBackend};
-use crate::model::mycelink_account::MycelinkAccount;
 use crate::model::tenant::Tenant;
+use crate::mycelink::mycelink_account::MycelinkAccount;
 use sqlx::{Row, Transaction};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -87,7 +87,7 @@ impl From<serde_json::Error> for MycelinkAccountEntryError {
 #[cfg(test)]
 mod tests {
     use crate::db::db_connector::DBConnector;
-    use crate::model::mycelink_account::MycelinkAccount;
+    use crate::mycelink::mycelink_account::MycelinkAccount;
 
     #[tokio::test]
     async fn get_nonexistent_account() {

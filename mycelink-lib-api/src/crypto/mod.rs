@@ -9,6 +9,7 @@ pub mod secret_box;
 pub mod signature_providers;
 pub mod signed_box;
 pub mod symmetrical_providers;
+pub mod tagged_types;
 pub mod types;
 
 pub enum CryptoError {}

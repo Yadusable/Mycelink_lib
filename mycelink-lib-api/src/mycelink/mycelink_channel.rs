@@ -7,12 +7,12 @@ use crate::crypto::secret_box::{DefaultSecretBox, SecretBoxError};
 use crate::crypto::symmetrical_providers::{
     DefaultSymmetricEncryptionProvider, SymmetricEncryptionProvider,
 };
+use crate::crypto::tagged_types::keys::PublicEncryptionKey;
+use crate::crypto::tagged_types::tagged_key_exchange::TaggedInitiateKeyExchange;
+use crate::crypto::tagged_types::tagged_keypair::TaggedEncryptionKeyPair;
+use crate::crypto::tagged_types::tagged_secret_box::TaggedSecretBox;
 use crate::fcp_tools::fcp_get::{fcp_get_inline, FcpGetError};
 use crate::fcp_tools::fcp_put::{fcp_put_inline, FcpPutError};
-use crate::model::keys::PublicEncryptionKey;
-use crate::model::tagged_key_exchange::TaggedInitiateKeyExchange;
-use crate::model::tagged_keypair::TaggedEncryptionKeyPair;
-use crate::model::tagged_secret_box::TaggedSecretBox;
 use crate::mycelink::compressed_box::{CompressedBox, CompressionHint, CompressionHinting};
 use crate::mycelink::mycelink_channel::ReceiveMessageError::{FailedRekey, NotInitialized};
 use crate::mycelink::mycelink_channel_message::MycelinkChannelMessage::FinalMessage;
@@ -332,8 +332,8 @@ mod tests {
     use crate::crypto::kdf_provider::KdfProviderTag;
     use crate::crypto::key_exchange::InitiateKeyExchange;
     use crate::crypto::key_exchange_providers::DefaultAsymmetricEncryptionProvider;
+    use crate::crypto::tagged_types::tagged_key_exchange::TaggedAnswerKeyExchange;
     use crate::fcp_tools::fcp_put::FcpPutError;
-    use crate::model::tagged_key_exchange::TaggedAnswerKeyExchange;
     use crate::mycelink::mycelink_channel::MycelinkChannel;
     use crate::mycelink::mycelink_channel_message::MycelinkChannelMessage;
     use crate::mycelink::mycelink_chat_message::{

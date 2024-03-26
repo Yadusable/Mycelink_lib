@@ -5,8 +5,8 @@ use crate::model::chat::ChatMetadata;
 use crate::model::contact::ContactId;
 use crate::model::media::{Media, MediaId};
 use crate::model::message::Message;
-use crate::model::mycelink_account::MycelinkAccount;
 use crate::model::tenant::Tenant;
+use crate::mycelink::mycelink_account::MycelinkAccount;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 
 pub struct APIConnector<L: LoginStatus, T: TenantState> {

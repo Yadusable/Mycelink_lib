@@ -1,14 +1,8 @@
 pub mod chat;
 pub mod connection_details;
 pub mod contact;
-pub mod keys;
 pub mod media;
 pub mod message;
 pub mod message_types;
-pub mod mycelink_account;
-pub mod tagged_hash;
-pub mod tagged_key_exchange;
-pub mod tagged_keypair;
-pub mod tagged_secret_box;
-pub mod tagged_signed_box;
+pub mod messager_service;
 pub mod tenant;

@@ -340,9 +340,9 @@ mod tests {
     use crate::crypto::key_exchange_providers::DefaultAsymmetricEncryptionProvider;
     use crate::crypto::tagged_types::tagged_key_exchange::TaggedAnswerKeyExchange;
     use crate::fcp_tools::fcp_put::FcpPutError;
-    use crate::mycelink::mycelink_channel::MycelinkChannel;
-    use crate::mycelink::mycelink_channel_message::MycelinkChannelMessage;
-    use crate::mycelink::mycelink_chat_message::{
+    use crate::mycelink::protocol::mycelink_channel::MycelinkChannel;
+    use crate::mycelink::protocol::mycelink_channel_message::MycelinkChannelMessage;
+    use crate::mycelink::protocol::mycelink_chat_message::{
         MycelinkChatMessage, MycelinkChatMessageContent, MycelinkChatMessageType,
     };
     use crate::test::create_test_fcp_connector;

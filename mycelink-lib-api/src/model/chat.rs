@@ -1,12 +1,15 @@
 use crate::model::message::MessageId;
 use crate::model::message_types::MessageType;
-use futures::Stream;
+use futures::future::BoxFuture;
+use futures::stream::BoxStream;
 use mycelink_lib_fcp::model::message::Message;
-use std::future::Future;
 
 pub trait Chat {
-    fn send_message(&mut self, message_type: MessageType) -> dyn Future<Output = Result<(), ()>>;
+    fn send_message(&mut self, message_type: MessageType) -> BoxFuture<Result<(), Box<str>>>;
 
-    fn open_message_streams_at(&self, message_id: MessageId) -> dyn Stream<Item = Message>;
-    fn open_message_streams_newest(&self) -> dyn Stream<Item = Message>;
+    fn open_message_streams_at(&self, message_id: MessageId) -> BoxStream<Message>;
+    fn open_message_streams_newest(&self) -> BoxStream<Message>;
+
+    fn display_name(&self) -> &str;
+    fn alternative_name(&self) -> Option<&str>;
 }

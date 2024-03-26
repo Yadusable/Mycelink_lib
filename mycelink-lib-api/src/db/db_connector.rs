@@ -8,6 +8,7 @@ use sqlx::sqlite::SqlitePoolOptions;
 
 pub type DatabaseBackend = Sqlite;
 
+#[derive(Clone)]
 pub struct DBConnector<T: TenantState> {
     pool: Pool<Sqlite>,
     tenant: T,
@@ -38,7 +39,9 @@ impl DBConnector<NoTenant> {
         SqlitePool::connect_with(connect_options).await
     }
 
-    async fn current_schema_version(pool: &Pool<DatabaseBackend>) -> Result<u32, sqlx::Error> {
+    pub(crate) async fn current_schema_version(
+        pool: &Pool<DatabaseBackend>,
+    ) -> Result<u32, sqlx::Error> {
         let mut conn = pool.acquire().await?;
 
         let res = conn

@@ -24,16 +24,19 @@ CREATE TABLE IF NOT EXISTS chat_ids
 
 CREATE TABLE IF NOT EXISTS chat_messages
 (
-    chat_id         INTEGER,
-    message_id      INTEGER PRIMARY KEY AUTOINCREMENT,
-    contact_id      INTEGER,
-    message_content BLOB,
-    timestamp       INTEGER,
-    tenant          TEXT NOT NULL,
+    chat_id               INTEGER NOT NULL,
+    message_id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id            INTEGER NOT NULL,
+    protocol_message_meta BLOB    NOT NULL,
+    message_content       BLOB    NOT NULL,
+    timestamp             INTEGER NOT NULL,
+    tenant                TEXT    NOT NULL,
     FOREIGN KEY (tenant) REFERENCES tenants (display_name),
     FOREIGN KEY (chat_id) REFERENCES chat_ids (id),
     FOREIGN KEY (contact_id) REFERENCES contacts (id)
 );
+
+
 
 CREATE TABLE IF NOT EXISTS chat_message_reactions
 (

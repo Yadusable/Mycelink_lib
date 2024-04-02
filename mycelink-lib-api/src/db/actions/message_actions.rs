@@ -3,7 +3,7 @@ use crate::db::actions::contact_actions::ContactId;
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::DBConnector;
 use crate::model::contact::ContactDisplay;
-use crate::model::message::Message;
+use crate::model::message::{Message, ProtocolMessageMeta};
 use futures::stream::{BoxStream, Map};
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
@@ -43,13 +43,12 @@ pub struct MessageSchema {
 }
 
 impl DBConnector<Tenant> {
-    pub async fn get_message(
-        //TODO to new api
+    pub async fn get_message_meta(
         &self,
         message_id: MessageId,
-    ) -> Result<Option<MessageSchema>, sqlx::error::Error> {
+    ) -> Result<Option<ProtocolMessageMeta>, sqlx::error::Error> {
         let query = sqlx::query(
-            "SELECT (message_id, chat_id, message_content, timestamp, contact_id) FROM chat_messages WHERE message_id = ? AND tenant = ?",
+            "SELECT protocol_message_meta FROM chat_messages WHERE message_id = ? AND tenant = ?",
         )
         .bind(message_id)
         .bind(self.tenant());
@@ -58,13 +57,10 @@ impl DBConnector<Tenant> {
 
         match row {
             None => Ok(None),
-            Some(row) => Ok(Some(MessageSchema {
-                contact_id: row.get("contact_id"),
-                message_id: row.get("message_id"),
-                chat_id: row.get("chat_id"),
-                timestamp: row.get::<i64, &str>("timestamp") as u64,
-                content: row.get("message_content"),
-            })),
+            Some(row) => Ok(Some(
+                ciborium::from_reader(row.get::<Vec<u8>, &str>("protocol_message_meta").as_slice())
+                    .unwrap(),
+            )),
         }
     }
 
@@ -78,6 +74,7 @@ impl DBConnector<Tenant> {
                 alternative_name,
                 low_res_profile_picture,
                 protocol,
+                protocol_message_meta,
                 GROUP_CONCAT(reaction_message_id, ',') reactions,
                 GROUP_CONCAT(thread_message_id, ',')   threads
             FROM chat_messages
@@ -101,6 +98,10 @@ impl DBConnector<Tenant> {
                 preview_profile_picture: row.get::<Vec<u8>, &str>("low_res_profile_picture").into(),
             },
             message_id: row.get("message_id"),
+            protocol_message_meta: ciborium::from_reader(
+                row.get::<Vec<u8>, &str>("protocol_message_meta").as_slice(),
+            )
+            .unwrap(),
             reactions: row
                 .get::<&str, &str>("reactions")
                 .split(',')
@@ -133,6 +134,7 @@ impl DBConnector<Tenant> {
                 alternative_name,
                 low_res_profile_picture,
                 protocol,
+                protocol_message_meta
                 GROUP_CONCAT(reaction_message_id, ',') reactions,
                 GROUP_CONCAT(thread_message_id, ',')   threads
             FROM chat_messages
@@ -161,6 +163,10 @@ impl DBConnector<Tenant> {
                         .into(),
                 },
                 message_id: row.get("message_id"),
+                protocol_message_meta: ciborium::from_reader(
+                    row.get::<Vec<u8>, &str>("protocol_message_meta").as_slice(),
+                )
+                .unwrap(),
                 reactions: row
                     .get::<&str, &str>("reactions")
                     .split(',')
@@ -198,6 +204,7 @@ impl DBConnector<Tenant> {
                 alternative_name,
                 low_res_profile_picture,
                 protocol,
+                protocol_message_meta,
                 GROUP_CONCAT(reaction_message_id, ',') reactions,
                 GROUP_CONCAT(thread_message_id, ',')   threads
             FROM chat_messages
@@ -226,6 +233,10 @@ impl DBConnector<Tenant> {
                         .into(),
                 },
                 message_id: row.get("message_id"),
+                protocol_message_meta: ciborium::from_reader(
+                    row.get::<Vec<u8>, &str>("protocol_message_meta").as_slice(),
+                )
+                .unwrap(),
                 reactions: row
                     .get::<&str, &str>("reactions")
                     .split(',')

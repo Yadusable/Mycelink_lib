@@ -4,7 +4,7 @@ use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::DBConnector;
 use crate::model::message::Message;
 use crate::model::message_types::MessageType;
-use crate::model::messenger_service::MessengerService;
+use crate::model::messenger_service::{MessengerService, SendMessageError};
 use futures::Stream;
 use std::ops::Deref;
 
@@ -25,8 +25,13 @@ pub struct MessageStreams<
 }
 
 impl Chat<'_, '_> {
-    pub async fn send_message(&mut self, message_type: MessageType) -> Result<(), ()> {
-        todo!()
+    pub async fn send_message(
+        &mut self,
+        message_type: MessageType,
+    ) -> Result<(), SendMessageError> {
+        self.message_service
+            .send_message(message_type, self.id)
+            .await
     }
 
     pub async fn open_message_streams_at(

@@ -1,3 +1,8 @@
+use crate::db::actions::tenant_actions::Tenant;
+use crate::db::db_connector::{DBConnector, DatabaseBackend};
+use crate::model;
+use crate::model::message::Message;
+use crate::model::message_types::{MessageContent, MessageType};
 use crate::mycelink::protocol::compressed_box::{CompressionHint, CompressionHinting};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
@@ -64,6 +69,47 @@ impl CompressionHinting for MycelinkChatMessageType {
     }
 }
 
+impl MessageType {
+    pub(crate) async fn into_mycelink(
+        self,
+        db_connector: &DBConnector<Tenant>,
+    ) -> MycelinkChatMessageType {
+        match self {
+            MessageType::Standard { content } => MycelinkChatMessageType::Standard {
+                content: content.into(),
+            },
+            MessageType::Reply {
+                thread_start,
+                content,
+            } => MycelinkChatMessageType::Reply {
+                thread_start: db_connector
+                    .get_message_meta(thread_start)
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .mycelink_id()
+                    .unwrap()
+                    .clone(),
+                content: content.into(),
+            },
+            MessageType::Reaction {
+                target_message,
+                indicator,
+            } => MycelinkChatMessageType::Reaction {
+                target_message: db_connector
+                    .get_message_meta(target_message)
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .mycelink_id()
+                    .unwrap()
+                    .clone(),
+                indicator,
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum MycelinkChatMessageContent {
     Text(Box<str>),
@@ -73,6 +119,17 @@ impl CompressionHinting for MycelinkChatMessageContent {
     fn compression_hint(&self) -> CompressionHint {
         match self {
             MycelinkChatMessageContent::Text(_) => CompressionHint::High,
+        }
+    }
+}
+
+impl From<model::message_types::MessageContent> for MycelinkChatMessageContent {
+    fn from(value: MessageContent) -> Self {
+        match value {
+            MessageContent::Text { content } => MycelinkChatMessageContent::Text(content),
+            MessageContent::Media { .. } => {
+                todo!()
+            }
         }
     }
 }

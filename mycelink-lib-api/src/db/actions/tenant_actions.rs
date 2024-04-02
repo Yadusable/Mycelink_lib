@@ -1,8 +1,48 @@
 use crate::db::db_connector::{DBConnector, DatabaseBackend, TenantState};
-use crate::model::tenant::Tenant;
-use sqlx::{Row, Transaction};
+use sqlx::database::HasArguments;
+use sqlx::encode::IsNull;
+use sqlx::sqlite::{SqliteArgumentValue, SqliteTypeInfo};
+use sqlx::{Encode, Row, Sqlite, Transaction, Type};
+use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
+
+#[derive(Eq, PartialEq, Debug)]
+pub struct Tenant {
+    display_name: Box<str>,
+}
+
+impl Tenant {
+    pub(crate) fn new(display_name: impl Into<Box<str>>) -> Tenant {
+        Self {
+            display_name: display_name.into(),
+        }
+    }
+
+    pub fn display_name(&self) -> &str {
+        &self.display_name
+    }
+}
+
+impl Encode<'_, Sqlite> for &Tenant {
+    fn encode_by_ref(&self, buf: &mut <Sqlite as HasArguments<'_>>::ArgumentBuffer) -> IsNull {
+        buf.push(SqliteArgumentValue::Text(Cow::Owned(
+            self.display_name().into(),
+        )));
+        IsNull::No
+    }
+}
+impl Type<Sqlite> for Tenant {
+    fn type_info() -> SqliteTypeInfo {
+        <&str as Type<Sqlite>>::type_info()
+    }
+}
+impl<T: Into<Box<str>>> From<T> for Tenant {
+    fn from(value: T) -> Self {
+        Self::new(value)
+    }
+}
 
 impl<T: TenantState> DBConnector<T> {
     pub async fn get_tenants(
@@ -82,9 +122,8 @@ impl From<sqlx::Error> for DeleteTenantError {
 
 #[cfg(test)]
 mod tests {
-    use crate::db::actions::tenant_actions::DeleteTenantError;
+    use crate::db::actions::tenant_actions::{DeleteTenantError, Tenant};
     use crate::db::db_connector::DBConnector;
-    use crate::model::tenant::Tenant;
 
     #[tokio::test]
     async fn get_empty_tenants() {

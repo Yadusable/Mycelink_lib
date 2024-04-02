@@ -1,7 +1,8 @@
+use crate::db::actions::message_actions::MessageId;
 use crate::model::media::MediaId;
-use crate::model::message::MessageId;
-use mime::Mime;
+use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize)]
 pub enum MessageType {
     Standard {
         content: MessageContent,
@@ -16,12 +17,13 @@ pub enum MessageType {
     },
 }
 
+#[derive(Serialize, Deserialize)]
 pub enum MessageContent {
     Text {
         content: Box<str>,
     },
     Media {
-        mime_type: Mime,
+        mime_type: Box<str>,
         media_size: u64,
         media_id: MediaId,
         filename: Box<str>,

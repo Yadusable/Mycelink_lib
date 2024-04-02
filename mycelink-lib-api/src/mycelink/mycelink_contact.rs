@@ -1,11 +1,8 @@
-use crate::model::contact::Contact;
+use crate::model::connection_details::PublicMycelinkConnectionDetails;
+use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MycelinkContact {
     display_name: Box<str>,
-}
-
-impl Contact for MycelinkContact {
-    fn display_name(&self) -> &str {
-        &self.display_name
-    }
+    connection_details: PublicMycelinkConnectionDetails,
 }

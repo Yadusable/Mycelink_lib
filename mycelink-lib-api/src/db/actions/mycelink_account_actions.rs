@@ -1,5 +1,5 @@
+use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::{DBConnector, DatabaseBackend};
-use crate::model::tenant::Tenant;
 use crate::mycelink::mycelink_account::MycelinkAccount;
 use sqlx::{Row, Transaction};
 use std::error::Error;

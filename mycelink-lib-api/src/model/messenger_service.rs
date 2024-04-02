@@ -1,8 +1,6 @@
-use crate::model::chat::Chat;
-use crate::model::contact::Contact;
-use futures::stream::BoxStream;
+use crate::db::actions::chat_actions::ChatId;
+use crate::model::message::Message;
 
 pub trait MessengerService {
-    fn list_chats(&self) -> BoxStream<dyn Chat>;
-    fn list_contacts(&self) -> BoxStream<dyn Contact>;
+    fn send_message(&self, message: Message, chat_id: ChatId);
 }

@@ -1,15 +1,14 @@
-use crate::model::contact::Contact;
+use crate::db::actions::message_actions::MessageId;
+use crate::model::contact::ContactDisplay;
+use crate::model::message_types::MessageType;
 
 pub struct Message {
-    sender_contact_id: Box<dyn Contact>,
-    message_id: MessageId,
+    pub sender: ContactDisplay,
+    pub message_id: MessageId,
     /// All [MessageId] that belong to a Message of type [crate::model::message_types::MessageType::Reaction] which reference this Message.
-    reactions: Vec<MessageId>,
+    pub reactions: Vec<MessageId>,
     /// All [MessageId] that belong to a Message of type [crate::model::message_types::MessageType::Reply] which reference this Message as thread start.
-    replies: Vec<MessageId>,
-    timestamp: u64,
-}
-
-pub struct MessageId {
-    id: Box<[u8]>,
+    pub replies: Vec<MessageId>,
+    pub timestamp: u64,
+    pub content: MessageType,
 }

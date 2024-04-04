@@ -1,5 +1,6 @@
 use crate::db::actions::chat_actions::ChatId;
 use crate::fcp_tools::fcp_put::FcpPutError;
+use crate::model::message::ProtocolMessageMeta;
 use crate::model::message_types::MessageType;
 use sqlx::Error;
 use std::fmt::Debug;
@@ -7,11 +8,11 @@ use std::future::Future;
 use std::pin::Pin;
 
 pub trait MessengerService {
-    fn send_message(
-        &self,
-        message: MessageType,
+    fn send_message<'a>(
+        &'a self,
+        message: &'a MessageType,
         chat_id: ChatId,
-    ) -> Pin<Box<dyn Future<Output = Result<(), SendMessageError>> + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<ProtocolMessageMeta, SendMessageError>> + '_>>;
 }
 
 pub enum SendMessageError {

@@ -68,7 +68,10 @@ impl<L: LoginStatus, T: TenantState> APIConnector<L, T> {
 }
 
 impl APIConnector<SignedIn, Tenant> {
-    pub async fn list_contacts(&self) -> BoxStream<ContactDisplay> {
+    pub async fn add_contact(
+        &self,
+        connection_details: PublicConnectionDetails,
+    ) -> Result<ContactDisplay, ()> {
         todo!()
     }
 
@@ -79,14 +82,11 @@ impl APIConnector<SignedIn, Tenant> {
         todo!()
     }
 
-    pub async fn add_contact(
-        &self,
-        connection_details: PublicConnectionDetails,
-    ) -> Result<ContactDisplay, ()> {
+    pub fn current_account_request_key(&self) -> Box<str> {
         todo!()
     }
 
-    pub fn current_account_request_key(&self) -> Box<str> {
+    pub async fn list_contacts(&self) -> BoxStream<ContactDisplay> {
         todo!()
     }
 }

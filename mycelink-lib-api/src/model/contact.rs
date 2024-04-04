@@ -1,5 +1,7 @@
+use crate::db::actions::contact_actions::ContactId;
+
 pub struct ContactDisplay {
-    pub id: i64,
+    pub id: ContactId,
     pub display_name: Box<str>,
     pub alternative_name: Option<Box<str>>,
     pub protocol: Box<str>,

@@ -1,12 +1,15 @@
 use crate::db::actions::chat_actions::ChatId;
+use crate::db::actions::contact_actions::ContactId;
 use crate::db::actions::message_actions::MessageId;
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::DBConnector;
+use crate::model::contact::ContactDisplay;
 use crate::model::message::Message;
 use crate::model::message_types::MessageType;
 use crate::model::messenger_service::{MessengerService, SendMessageError};
 use futures::Stream;
 use std::ops::Deref;
+use std::time::UNIX_EPOCH;
 
 pub struct Chat<'a, 'b> {
     id: ChatId,
@@ -28,10 +31,26 @@ impl Chat<'_, '_> {
     pub async fn send_message(
         &mut self,
         message_type: MessageType,
+        sender_contact: ContactDisplay, // Typically own contact
     ) -> Result<(), SendMessageError> {
-        self.message_service
-            .send_message(message_type, self.id)
-            .await
+        let meta = self
+            .message_service
+            .send_message(&message_type, self.id)
+            .await?;
+
+        let message = Message {
+            sender: sender_contact,
+            message_id: MessageId(i64::MAX),
+            protocol_message_meta: meta,
+            reactions: vec![],
+            replies: vec![],
+            timestamp: UNIX_EPOCH.elapsed().unwrap().as_secs(), //TODO maybe use same timestamp as sent one?
+            content: message_type,
+        };
+
+        self.db_connector.store_message(message, self.id).await?;
+
+        Ok(())
     }
 
     pub async fn open_message_streams_at(

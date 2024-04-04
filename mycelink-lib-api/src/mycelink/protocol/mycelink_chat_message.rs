@@ -1,24 +1,24 @@
 use crate::db::actions::tenant_actions::Tenant;
-use crate::db::db_connector::{DBConnector, DatabaseBackend};
+use crate::db::db_connector::DBConnector;
 use crate::model;
-use crate::model::message::Message;
 use crate::model::message_types::{MessageContent, MessageType};
 use crate::mycelink::protocol::compressed_box::{CompressionHint, CompressionHinting};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MycelinkChatMessage {
+pub struct MycelinkChatMessage<'a> {
     timestamp: u64,
     id: MycelinkChatMessageId,
-    message_type: MycelinkChatMessageType,
+    message_type: MycelinkChatMessageType<'a>,
 }
 
-impl MycelinkChatMessage {
+impl<'a> MycelinkChatMessage<'a> {
     pub fn new(
         timestamp: u64,
         id: MycelinkChatMessageId,
-        message_type: MycelinkChatMessageType,
+        message_type: MycelinkChatMessageType<'a>,
     ) -> Self {
         Self {
             timestamp,
@@ -38,20 +38,20 @@ impl MycelinkChatMessage {
     }
 }
 
-impl CompressionHinting for MycelinkChatMessage {
+impl CompressionHinting for MycelinkChatMessage<'_> {
     fn compression_hint(&self) -> CompressionHint {
         self.message_type.compression_hint()
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub enum MycelinkChatMessageType {
+pub enum MycelinkChatMessageType<'a> {
     Standard {
-        content: MycelinkChatMessageContent,
+        content: MycelinkChatMessageContent<'a>,
     },
     Reply {
         thread_start: MycelinkChatMessageId,
-        content: MycelinkChatMessageContent,
+        content: MycelinkChatMessageContent<'a>,
     },
     Reaction {
         target_message: MycelinkChatMessageId,
@@ -59,7 +59,7 @@ pub enum MycelinkChatMessageType {
     },
 }
 
-impl CompressionHinting for MycelinkChatMessageType {
+impl CompressionHinting for MycelinkChatMessageType<'_> {
     fn compression_hint(&self) -> CompressionHint {
         match self {
             MycelinkChatMessageType::Standard { content } => content.compression_hint(),
@@ -70,8 +70,8 @@ impl CompressionHinting for MycelinkChatMessageType {
 }
 
 impl MessageType {
-    pub(crate) async fn into_mycelink(
-        self,
+    pub(crate) async fn as_mycelink(
+        &self,
         db_connector: &DBConnector<Tenant>,
     ) -> MycelinkChatMessageType {
         match self {
@@ -104,18 +104,18 @@ impl MessageType {
                     .mycelink_id()
                     .unwrap()
                     .clone(),
-                indicator,
+                indicator: *indicator,
             },
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub enum MycelinkChatMessageContent {
-    Text(Box<str>),
+pub enum MycelinkChatMessageContent<'a> {
+    Text(Cow<'a, str>),
 }
 
-impl CompressionHinting for MycelinkChatMessageContent {
+impl CompressionHinting for MycelinkChatMessageContent<'_> {
     fn compression_hint(&self) -> CompressionHint {
         match self {
             MycelinkChatMessageContent::Text(_) => CompressionHint::High,
@@ -123,10 +123,25 @@ impl CompressionHinting for MycelinkChatMessageContent {
     }
 }
 
-impl From<model::message_types::MessageContent> for MycelinkChatMessageContent {
+impl From<model::message_types::MessageContent> for MycelinkChatMessageContent<'_> {
     fn from(value: MessageContent) -> Self {
         match value {
-            MessageContent::Text { content } => MycelinkChatMessageContent::Text(content),
+            MessageContent::Text { content } => {
+                MycelinkChatMessageContent::Text(Cow::Owned(content.into()))
+            }
+            MessageContent::Media { .. } => {
+                todo!()
+            }
+        }
+    }
+}
+
+impl<'a> From<&'a model::message_types::MessageContent> for MycelinkChatMessageContent<'a> {
+    fn from(value: &'a MessageContent) -> Self {
+        match value {
+            MessageContent::Text { content } => {
+                MycelinkChatMessageContent::Text(Cow::Borrowed(content.as_ref()))
+            }
             MessageContent::Media { .. } => {
                 todo!()
             }

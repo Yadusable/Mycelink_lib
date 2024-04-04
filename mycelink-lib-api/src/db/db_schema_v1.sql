@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS contacts
     profile_picture         BLOB,
     low_res_profile_picture BLOB,
     protocol                TEXT NOT NULL,
-    connection_details      TEXT NOT NULL,
+    connection_details      BLOB NOT NULL,
 
     FOREIGN KEY (tenant, protocol) REFERENCES protocol_config_per_tenant (tenant, protocol)
 );

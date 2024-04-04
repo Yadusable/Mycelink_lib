@@ -12,7 +12,7 @@ pub struct InitialChannelMessage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum MycelinkChannelMessage {
+pub enum MycelinkChannelMessage<'a> {
     GroupChatRekey {
         //TODO
     },
@@ -21,12 +21,12 @@ pub enum MycelinkChannelMessage {
         new_kdf: KdfProviderTag,
         next_public_components: Box<[TaggedInitiateKeyExchange]>,
 
-        attached_message: Box<MycelinkChannelMessage>,
+        attached_message: Box<MycelinkChannelMessage<'a>>,
     },
-    DirectMessage(MycelinkChatMessage),
+    DirectMessage(MycelinkChatMessage<'a>),
 }
 
-impl CompressionHinting for MycelinkChannelMessage {
+impl CompressionHinting for MycelinkChannelMessage<'_> {
     fn compression_hint(&self) -> CompressionHint {
         match self {
             MycelinkChannelMessage::GroupChatRekey { .. } => CompressionHint::Fast,
@@ -36,10 +36,10 @@ impl CompressionHinting for MycelinkChannelMessage {
     }
 }
 
-impl<'a> TryFrom<&'a MycelinkChannelMessage> for &'a MycelinkChatMessage {
+impl<'a, 'b> TryFrom<&'a MycelinkChannelMessage<'b>> for &'a MycelinkChatMessage<'b> {
     type Error = ();
 
-    fn try_from(value: &'a MycelinkChannelMessage) -> Result<Self, Self::Error> {
+    fn try_from(value: &'a MycelinkChannelMessage<'b>) -> Result<Self, Self::Error> {
         match value {
             MycelinkChannelMessage::DirectMessage(inner) => Ok(inner),
             _ => Err(()),

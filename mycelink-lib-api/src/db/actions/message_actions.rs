@@ -11,10 +11,11 @@ use sqlx::database::{HasArguments, HasValueRef};
 use sqlx::encode::IsNull;
 use sqlx::error::BoxDynError;
 use sqlx::sqlite::{SqliteArgumentValue, SqliteRow, SqliteTypeInfo};
+use sqlx::types::Json;
 use sqlx::{Decode, Encode, Row, Sqlite, Type};
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
-pub struct MessageId(i64);
+pub struct MessageId(pub(crate) i64);
 
 impl Decode<'_, Sqlite> for MessageId {
     fn decode(value: <Sqlite as HasValueRef<'_>>::ValueRef) -> Result<Self, BoxDynError> {
@@ -45,7 +46,7 @@ pub struct MessageSchema {
 impl DBConnector<Tenant> {
     pub async fn get_message_meta(
         &self,
-        message_id: MessageId,
+        message_id: &MessageId,
     ) -> Result<Option<ProtocolMessageMeta>, sqlx::error::Error> {
         let query = sqlx::query(
             "SELECT protocol_message_meta FROM chat_messages WHERE message_id = ? AND tenant = ?",
@@ -256,5 +257,28 @@ impl DBConnector<Tenant> {
         });
 
         mapped
+    }
+
+    /// Stores a Message into the database
+    /// The id field is ignored as the database generates a new message_id. The new id is then returned.
+    pub async fn store_message(
+        &self,
+        message: Message,
+        chat_id: ChatId,
+    ) -> sqlx::Result<MessageId> {
+        let query = sqlx::query("
+            INSERT INTO chat_messages (chat_id, contact_id, protocol_message_meta, message_content, timestamp, tenant)
+            VALUES (?, ?, ?, ?, ?, ?, ?)")
+            .bind(chat_id)
+            .bind(&message.sender.id)
+            .bind(Json(message.protocol_message_meta))
+            .bind(Json(message.content))
+            .bind(message.timestamp as i64)
+            .bind(self.tenant());
+
+        query
+            .execute(self.pool().await)
+            .await
+            .map(|e| MessageId(e.last_insert_rowid()))
     }
 }

@@ -143,7 +143,7 @@ impl MycelinkChannel {
 
     pub async fn send_channel_message(
         &mut self,
-        message: &MycelinkChannelMessage,
+        message: &MycelinkChannelMessage<'_>,
         fcp_connector: &FCPConnector,
     ) -> Result<(), FcpPutError> {
         let rekeyed = self.rekey_send_if_possible(message, fcp_connector).await?;
@@ -159,7 +159,7 @@ impl MycelinkChannel {
 
     pub async fn send_chat_message(
         &mut self,
-        message: MycelinkChatMessageType,
+        message: MycelinkChatMessageType<'_>,
         fcp_connector: &FCPConnector,
     ) -> Result<MycelinkChatMessageId, FcpPutError> {
         let message_id = MycelinkChatMessageId::new();
@@ -178,7 +178,7 @@ impl MycelinkChannel {
 
     async fn rekey_send_if_possible(
         &mut self,
-        attached_message: &MycelinkChannelMessage,
+        attached_message: &MycelinkChannelMessage<'_>,
         fcp_connector: &FCPConnector,
     ) -> Result<bool, FcpPutError> {
         if let Some(pending_public_components) = &self.pending_public_components {

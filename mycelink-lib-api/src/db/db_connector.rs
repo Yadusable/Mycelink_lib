@@ -50,6 +50,13 @@ impl DBConnector<NoTenant> {
 
         Ok(res.map(|row| row.get::<u32, _>(0)).unwrap_or(0))
     }
+
+    pub fn enter_tenant(self, tenant: Tenant) -> DBConnector<Tenant> {
+        DBConnector {
+            pool: self.pool,
+            tenant,
+        }
+    }
 }
 
 impl<T: TenantState> DBConnector<T> {

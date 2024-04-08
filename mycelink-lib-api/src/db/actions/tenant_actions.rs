@@ -1,8 +1,11 @@
 use crate::db::db_connector::{DBConnector, DatabaseBackend, TenantState};
-use sqlx::database::HasArguments;
+use futures::stream::{BoxStream, Map};
+use futures::{Stream, StreamExt};
+use sqlx::database::{HasArguments, HasValueRef};
 use sqlx::encode::IsNull;
-use sqlx::sqlite::{SqliteArgumentValue, SqliteTypeInfo};
-use sqlx::{Encode, Row, Sqlite, Transaction, Type};
+use sqlx::error::BoxDynError;
+use sqlx::sqlite::{SqliteArgumentValue, SqliteRow, SqliteTypeInfo};
+use sqlx::{Decode, Encode, Row, Sqlite, Transaction, Type};
 use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -38,6 +41,14 @@ impl Type<Sqlite> for Tenant {
         <&str as Type<Sqlite>>::type_info()
     }
 }
+impl Decode<'_, Sqlite> for Tenant {
+    fn decode(value: <Sqlite as HasValueRef<'_>>::ValueRef) -> Result<Self, BoxDynError> {
+        let value = <&str as Decode<Sqlite>>::decode(value)?;
+        Ok(Tenant {
+            display_name: value.into(),
+        })
+    }
+}
 impl<T: Into<Box<str>>> From<T> for Tenant {
     fn from(value: T) -> Self {
         Self::new(value)
@@ -45,31 +56,33 @@ impl<T: Into<Box<str>>> From<T> for Tenant {
 }
 
 impl<T: TenantState> DBConnector<T> {
-    pub async fn get_tenants(
-        &self,
-        tx: &mut Transaction<'_, DatabaseBackend>,
-    ) -> Result<Box<[Tenant]>, sqlx::Error> {
+    pub async fn get_tenants(&self) -> impl Stream<Item = sqlx::Result<Tenant>> + '_ {
         let statement = sqlx::query("SELECT (display_name) FROM tenants;");
-        let rows = statement.fetch_all(&mut **tx).await?;
+        let rows = statement.fetch(self.pool().await);
 
-        let mut res = Vec::with_capacity(rows.len());
-        for row in rows.into_iter() {
-            res.push(Tenant::new(
-                row.try_get::<'_, Box<str>, &str>("display_name")?,
-            ))
-        }
-        Ok(res.into())
+        rows.map(|e| e.map(|e| e.get("display_name")))
+    }
+
+    pub async fn has_tenant(&self, tenant: &str) -> sqlx::Result<bool> {
+        let query = sqlx::query("SELECT COUNT(*) as count FROM tenants WHERE display_name = ?;")
+            .bind(tenant);
+
+        let res = query.fetch_one(self.pool().await).await?;
+
+        Ok(res.get::<i32, &str>("count") > 0)
     }
 
     pub async fn create_tenant(
         &self,
-        tx: &mut Transaction<'_, DatabaseBackend>,
         display_name: impl Into<Box<str>>,
     ) -> Result<Tenant, sqlx::Error> {
         let display_name = display_name.into();
 
         let query = sqlx::query("INSERT INTO tenants VALUES (?);");
-        query.bind(display_name.clone()).execute(&mut **tx).await?;
+        query
+            .bind(display_name.clone())
+            .execute(self.pool().await)
+            .await?;
         Ok(Tenant::new(display_name))
     }
 

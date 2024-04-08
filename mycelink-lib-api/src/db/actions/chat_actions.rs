@@ -1,7 +1,9 @@
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::actions::Protocol;
 use crate::db::db_connector::DBConnector;
+use crate::model::chat::Chat;
 use crate::model::chat_config::ChatConfig;
+use crate::model::messenger_service::MessengerService;
 use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use sqlx::database::{HasArguments, HasValueRef};
@@ -30,35 +32,31 @@ impl Encode<'_, Sqlite> for ChatId {
     }
 }
 
-pub struct ChatSchema {
-    id: ChatId,
-    display_name: Box<str>,
-    protocol_config: Box<[u8]>,
-}
-
 impl DBConnector<Tenant> {
-    pub async fn list_chats(
-        &self,
-        protocol: Protocol,
-    ) -> Result<impl Stream<Item = Result<ChatSchema, sqlx::Error>> + '_, sqlx::Error> {
-        let query = sqlx::query(
-            "SELECT (id, display_name, protocol_config) FROM chat_ids WHERE protocol = ? AND tenant = ?;",
-        )
-            .bind(protocol)
-            .bind(self.tenant());
+    pub async fn list_chats<'a>(
+        &'a self,
+        messenger_services: &'a [&dyn MessengerService],
+    ) -> impl Stream<Item = Result<Chat, sqlx::Error>> + 'a {
+        let query =
+            sqlx::query("SELECT id, display_name, protocol FROM chat_ids WHERE tenant = ?;")
+                .bind(self.tenant());
 
-        Ok(query.fetch(self.pool().await).map(|e| {
-            e.map(|e| {
-                let id = e.try_get("id").unwrap();
-                let display_name = e.try_get("display_name").unwrap();
-                let protocol_config = e.try_get("protocol_config").unwrap();
-                ChatSchema {
-                    id,
-                    display_name,
-                    protocol_config,
-                }
+        query.fetch(self.pool().await).map(move |e| {
+            e.and_then(|row| {
+                Ok(Chat {
+                    id: row.get("id"),
+                    display_name: row.get("display_name"),
+                    alt_name: None,
+                    message_service: *messenger_services
+                        .iter()
+                        .find(|e| {
+                            Into::<&str>::into(e.protocol()) == row.get::<&str, &str>("protocol")
+                        })
+                        .ok_or(sqlx::Error::RowNotFound)?,
+                    db_connector: &self,
+                })
             })
-        }))
+        })
     }
 
     pub async fn get_chat_config(&self, chat_id: ChatId) -> sqlx::Result<Option<ChatConfig>> {

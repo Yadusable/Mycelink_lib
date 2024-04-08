@@ -2,8 +2,8 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 
 pub struct Config {
-    fcp_endpoint: SocketAddr,
-    database_path: PathBuf,
+    pub fcp_endpoint: SocketAddr,
+    pub database_path: PathBuf,
 }
 
 impl Default for Config {

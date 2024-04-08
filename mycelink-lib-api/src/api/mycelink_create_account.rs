@@ -7,7 +7,7 @@ use crate::mycelink::mycelink_account::MycelinkAccount;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-impl<L: LoginStatus> APIConnector<L, Tenant> {
+impl APIConnector<Tenant> {
     pub async fn create_mycelink_account(
         &self,
         display_name: impl Into<Box<str>>,

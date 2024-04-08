@@ -1,6 +1,7 @@
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::DBConnector;
 use crate::model::contact::ContactDisplay;
+use futures::{Stream, StreamExt};
 use sqlx::database::{HasArguments, HasValueRef};
 use sqlx::encode::IsNull;
 use sqlx::error::BoxDynError;
@@ -50,7 +51,24 @@ impl DBConnector<Tenant> {
                 display_name: row.get("display_name"),
                 alternative_name: row.get("alternative_name"),
                 protocol: row.get("protocol"),
-                preview_profile_picture: row.get::<Vec<u8>, &str>("low_res_profile_picture").into(),
+                preview_profile_picture: row
+                    .try_get::<Vec<u8>, &str>("low_res_profile_picture")
+                    .ok()
+                    .map(|e| e.into()),
             }))
+    }
+
+    pub async fn list_contacts(&self) -> impl Stream<Item = sqlx::Result<ContactDisplay>> + '_ {
+        let query = sqlx::query("SELECT id, display_name, alternative_name, low_res_profile_picture, protocol FROM contacts WHERE tenant = ?;").bind(self.tenant());
+
+        query.fetch(self.pool().await).map(|e| {
+            e.map(|row| ContactDisplay {
+                id: row.get("id"),
+                display_name: row.get("display_name"),
+                alternative_name: row.try_get("alternative_name").ok(),
+                protocol: row.get("protocol"),
+                preview_profile_picture: row.try_get("low_res_profile_picture").ok(),
+            })
+        })
     }
 }

@@ -2,12 +2,14 @@ use crate::db::actions::chat_actions::ChatId;
 use crate::fcp_tools::fcp_put::FcpPutError;
 use crate::model::message::ProtocolMessageMeta;
 use crate::model::message_types::MessageType;
-use sqlx::Error;
+use crate::model::protocol_config::Protocol;
 use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
 
 pub trait MessengerService {
+    fn protocol(&self) -> Protocol;
+
     fn send_message<'a>(
         &'a self,
         message: &'a MessageType,
@@ -21,7 +23,7 @@ pub enum SendMessageError {
 }
 
 impl From<sqlx::error::Error> for SendMessageError {
-    fn from(value: Error) -> Self {
+    fn from(value: sqlx::error::Error) -> Self {
         Self::Sqlx(value)
     }
 }

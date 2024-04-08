@@ -7,3 +7,4 @@ pub mod media;
 pub mod message;
 pub mod message_types;
 pub mod messenger_service;
+pub mod protocol_config;

@@ -1,5 +1,4 @@
 use crate::db::actions::chat_actions::ChatId;
-use crate::db::actions::contact_actions::ContactId;
 use crate::db::actions::message_actions::MessageId;
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::DBConnector;
@@ -12,11 +11,11 @@ use std::ops::Deref;
 use std::time::UNIX_EPOCH;
 
 pub struct Chat<'a, 'b> {
-    id: ChatId,
-    display_name: Box<str>,
-    alt_name: Option<Box<str>>,
-    message_service: &'a dyn MessengerService,
-    db_connector: &'b DBConnector<Tenant>,
+    pub(crate) id: ChatId,
+    pub(crate) display_name: Box<str>,
+    pub(crate) alt_name: Option<Box<str>>,
+    pub(crate) message_service: &'a dyn MessengerService,
+    pub(crate) db_connector: &'b DBConnector<Tenant>,
 }
 
 pub struct MessageStreams<

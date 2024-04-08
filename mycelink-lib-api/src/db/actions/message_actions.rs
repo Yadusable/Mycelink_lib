@@ -96,7 +96,10 @@ impl DBConnector<Tenant> {
                 display_name: row.get("display_name"),
                 alternative_name: row.try_get("alternative_name").ok(),
                 protocol: row.get("protocol"),
-                preview_profile_picture: row.get::<Vec<u8>, &str>("low_res_profile_picture").into(),
+                preview_profile_picture: row
+                    .try_get::<Vec<u8>, &str>("low_res_profile_picture")
+                    .ok()
+                    .map(|e| e.into()),
             },
             message_id: row.get("message_id"),
             protocol_message_meta: ciborium::from_reader(
@@ -160,8 +163,9 @@ impl DBConnector<Tenant> {
                     alternative_name: row.try_get("alternative_name").ok(),
                     protocol: row.get("protocol"),
                     preview_profile_picture: row
-                        .get::<Vec<u8>, &str>("low_res_profile_picture")
-                        .into(),
+                        .try_get::<Vec<u8>, &str>("low_res_profile_picture")
+                        .ok()
+                        .map(|e| e.into()),
                 },
                 message_id: row.get("message_id"),
                 protocol_message_meta: ciborium::from_reader(
@@ -230,8 +234,9 @@ impl DBConnector<Tenant> {
                     alternative_name: row.try_get("alternative_name").ok(),
                     protocol: row.get("protocol"),
                     preview_profile_picture: row
-                        .get::<Vec<u8>, &str>("low_res_profile_picture")
-                        .into(),
+                        .try_get::<Vec<u8>, &str>("low_res_profile_picture")
+                        .ok()
+                        .map(|e| e.into()),
                 },
                 message_id: row.get("message_id"),
                 protocol_message_meta: ciborium::from_reader(

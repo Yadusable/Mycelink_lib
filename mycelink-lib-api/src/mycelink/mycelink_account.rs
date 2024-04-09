@@ -5,7 +5,7 @@ use crate::model::connection_details::PublicMycelinkConnectionDetails;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MycelinkAccount {
     request_ssk_key: Box<str>,
     insert_ssk_key: Box<str>,

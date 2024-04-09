@@ -7,18 +7,21 @@ use crate::model::chat::Chat;
 use crate::model::config::Config;
 use crate::model::connection_details::PublicConnectionDetails;
 use crate::model::contact::ContactDisplay;
-use crate::model::messenger_service::MessengerService;
+use crate::model::messenger_service::{MessengerService, PollableService};
 use crate::model::protocol_config::{Protocol, ProtocolConfig};
 use crate::mycelink::mycelink_account::MycelinkAccount;
-use futures::Stream;
+use crate::mycelink::mycelink_service::MycelinkService;
+use futures::future::join_all;
+use futures::{Stream, StreamExt};
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use std::error::Error;
+use std::sync::Arc;
 use tokio::net::TcpStream;
 
 pub struct APIConnector<T: TenantState> {
     db_connector: DBConnector<T>,
-    fcp_connector: FCPConnector,
-    messenger_services: [&'static dyn MessengerService; 0],
+    fcp_connector: Arc<FCPConnector>,
+    messenger_services: Vec<PollableService>,
 }
 
 pub trait LoginStatus {}
@@ -31,12 +34,36 @@ impl LoginStatus for NotSignedIn {}
 impl LoginStatus for SignedIn {}
 
 impl APIConnector<NoTenant> {
-    pub fn enter_tenant(self, tenant: Tenant) -> APIConnector<Tenant> {
-        APIConnector {
+    pub async fn enter_tenant(self, tenant: Tenant) -> APIConnector<Tenant> {
+        let mut res = APIConnector {
             db_connector: self.db_connector.enter_tenant(tenant),
             fcp_connector: self.fcp_connector,
             messenger_services: self.messenger_services,
+        };
+
+        let mut protocol_configs = res.db_connector.get_protocol_configs().await;
+
+        while let Some(Ok(protocol_config)) = protocol_configs.next().await {
+            match protocol_config {
+                ProtocolConfig::Mycelink { account } => {
+                    res.messenger_services
+                        .push(PollableService::MycelinkService(MycelinkService::new(
+                            res.db_connector.clone(),
+                            res.fcp_connector.clone(),
+                            account,
+                        )))
+                }
+            }
         }
+
+        drop(protocol_configs);
+
+        res
+    }
+
+    pub async fn poll_chats(&self) -> Result<(), ()> {
+        let futures = join_all(self.messenger_services.iter().map(|e| e.poll())).await;
+        futures.iter().fold(Ok(()), |acc, e| acc.and(*e))
     }
 
     pub async fn create_tenant(&self, name: &str) -> sqlx::Result<Tenant> {
@@ -58,8 +85,8 @@ impl APIConnector<NoTenant> {
 
         Ok(Self {
             db_connector,
-            fcp_connector,
-            messenger_services: [],
+            fcp_connector: Arc::new(fcp_connector),
+            messenger_services: Vec::new(),
         })
     }
 
@@ -67,7 +94,7 @@ impl APIConnector<NoTenant> {
         if !self.db_connector.has_tenant("demo").await? {
             self.db_connector.create_tenant("demo").await?;
         }
-        Ok(self.enter_tenant(Tenant::new("demo")))
+        Ok(self.enter_tenant(Tenant::new("demo")).await)
     }
 }
 
@@ -84,18 +111,18 @@ impl APIConnector<Tenant> {
         self.db_connector.get_protocol_configs().await
     }
 
-    pub async fn add_contact(
-        &self,
-        connection_details: PublicConnectionDetails,
-    ) -> Result<ContactDisplay, ()> {
+    pub async fn add_contact(&self, account_request_key: Box<str>) -> Result<ContactDisplay, ()> {
         todo!()
     }
 
     pub async fn create_direct_chat(&self, contact_id: ContactId) -> Result<Chat, ()> {
         todo!()
     }
+
     pub async fn list_chats(&self) -> impl Stream<Item = sqlx::Result<Chat>> + '_ {
-        self.db_connector.list_chats(&self.messenger_services).await
+        self.db_connector
+            .list_chats(self.messenger_services.as_slice())
+            .await
     }
 
     pub async fn current_mycelink_account_request_key(&self) -> Result<Box<str>, ()> {

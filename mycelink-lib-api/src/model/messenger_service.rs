@@ -3,6 +3,7 @@ use crate::fcp_tools::fcp_put::FcpPutError;
 use crate::model::message::ProtocolMessageMeta;
 use crate::model::message_types::MessageType;
 use crate::model::protocol_config::Protocol;
+use crate::mycelink::mycelink_service::MycelinkService;
 use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
@@ -15,6 +16,24 @@ pub trait MessengerService {
         message: &'a MessageType,
         chat_id: ChatId,
     ) -> Pin<Box<dyn Future<Output = Result<ProtocolMessageMeta, SendMessageError>> + '_>>;
+}
+
+pub enum PollableService {
+    MycelinkService(MycelinkService),
+}
+
+impl PollableService {
+    pub async fn poll(&self) -> Result<(), ()> {
+        match self {
+            PollableService::MycelinkService(service) => service.poll().await,
+        }
+    }
+
+    pub fn service(&self) -> &dyn MessengerService {
+        match self {
+            PollableService::MycelinkService(service) => service,
+        }
+    }
 }
 
 pub enum SendMessageError {

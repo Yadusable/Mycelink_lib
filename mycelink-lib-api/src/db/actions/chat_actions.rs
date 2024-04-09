@@ -3,7 +3,7 @@ use crate::db::actions::Protocol;
 use crate::db::db_connector::DBConnector;
 use crate::model::chat::Chat;
 use crate::model::chat_config::ChatConfig;
-use crate::model::messenger_service::MessengerService;
+use crate::model::messenger_service::{MessengerService, PollableService};
 use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use sqlx::database::{HasArguments, HasValueRef};
@@ -11,6 +11,7 @@ use sqlx::encode::IsNull;
 use sqlx::error::BoxDynError;
 use sqlx::sqlite::{SqliteArgumentValue, SqliteTypeInfo};
 use sqlx::{Decode, Encode, Row, Sqlite, Type};
+use std::sync::Arc;
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct ChatId(i64);
@@ -35,7 +36,7 @@ impl Encode<'_, Sqlite> for ChatId {
 impl DBConnector<Tenant> {
     pub async fn list_chats<'a>(
         &'a self,
-        messenger_services: &'a [&dyn MessengerService],
+        messenger_services: &'a [PollableService],
     ) -> impl Stream<Item = Result<Chat, sqlx::Error>> + 'a {
         let query =
             sqlx::query("SELECT id, display_name, protocol FROM chat_ids WHERE tenant = ?;")
@@ -47,13 +48,37 @@ impl DBConnector<Tenant> {
                     id: row.get("id"),
                     display_name: row.get("display_name"),
                     alt_name: None,
-                    message_service: *messenger_services
+                    message_service: messenger_services
                         .iter()
+                        .map(|e| e.service())
                         .find(|e| {
                             Into::<&str>::into(e.protocol()) == row.get::<&str, &str>("protocol")
                         })
                         .ok_or(sqlx::Error::RowNotFound)?,
-                    db_connector: &self,
+                    db_connector: self,
+                })
+            })
+        })
+    }
+
+    pub async fn list_protocol_chats<'a>(
+        &'a self,
+        messenger_service: &'a dyn MessengerService,
+    ) -> impl Stream<Item = sqlx::Result<Chat>> + 'a {
+        let query = sqlx::query(
+            "SELECT id, display_name, protocol FROM chat_ids WHERE protocol = ? AND tenant = ?;",
+        )
+        .bind(messenger_service.protocol())
+        .bind(self.tenant());
+
+        query.fetch(self.pool().await).map(move |e| {
+            e.and_then(|row| {
+                Ok(Chat {
+                    id: row.get("id"),
+                    display_name: row.get("display_name"),
+                    alt_name: None,
+                    message_service: messenger_service,
+                    db_connector: self,
                 })
             })
         })

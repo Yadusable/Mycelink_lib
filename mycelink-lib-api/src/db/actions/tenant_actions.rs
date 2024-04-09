@@ -11,7 +11,7 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub struct Tenant {
     display_name: Box<str>,
 }

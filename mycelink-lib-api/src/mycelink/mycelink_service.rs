@@ -6,14 +6,17 @@ use crate::model::message::ProtocolMessageMeta;
 use crate::model::message_types::MessageType;
 use crate::model::messenger_service::{MessengerService, SendMessageError};
 use crate::model::protocol_config::Protocol;
+use crate::mycelink::mycelink_account::MycelinkAccount;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct MycelinkService {
     db: DBConnector<Tenant>,
     fcp_connector: Arc<FCPConnector>,
+    account: MycelinkAccount,
 }
 
 impl MycelinkService {
@@ -27,6 +30,22 @@ impl MycelinkService {
         Ok(details
             .send(message, self.fcp_connector.as_ref(), &self.db)
             .await?)
+    }
+
+    pub fn new(
+        db_connector: DBConnector<Tenant>,
+        fcp_connector: Arc<FCPConnector>,
+        account: MycelinkAccount,
+    ) -> Self {
+        Self {
+            db: db_connector,
+            fcp_connector,
+            account,
+        }
+    }
+
+    pub async fn poll(&self) -> Result<(), ()> {
+        todo!()
     }
 }
 

@@ -4,12 +4,12 @@ use crate::crypto::signature_providers::ed25519;
 use crate::crypto::tagged_types::keys::{PublicEncryptionKey, PublicSigningKey};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TaggedEncryptionKeyPair {
     X25519(EncryptionKeyPair<x25519::X25519>),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TaggedSignatureKeyPair {
     Ed25519(SignatureKeyPair<ed25519::Ed25519>),
 }

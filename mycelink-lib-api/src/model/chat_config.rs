@@ -5,3 +5,15 @@ use serde::{Deserialize, Serialize};
 pub enum ChatConfig {
     Mycelink(MycelinkChat),
 }
+
+impl TryFrom<ChatConfig> for MycelinkChat {
+    type Error = ();
+
+    fn try_from(value: ChatConfig) -> Result<Self, Self::Error> {
+        if let ChatConfig::Mycelink(chat) = value {
+            Ok(chat)
+        } else {
+            Err(())
+        }
+    }
+}

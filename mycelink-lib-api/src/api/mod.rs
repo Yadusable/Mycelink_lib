@@ -7,7 +7,7 @@ use crate::model::chat::Chat;
 use crate::model::config::Config;
 use crate::model::connection_details::PublicConnectionDetails;
 use crate::model::contact::ContactDisplay;
-use crate::model::messenger_service::{MessengerService, PollableService};
+use crate::model::messenger_service::{MessengerService, PollError, PollableService};
 use crate::model::protocol_config::{Protocol, ProtocolConfig};
 use crate::mycelink::mycelink_account::MycelinkAccount;
 use crate::mycelink::mycelink_service::MycelinkService;
@@ -61,9 +61,9 @@ impl APIConnector<NoTenant> {
         res
     }
 
-    pub async fn poll_chats(&self) -> Result<(), ()> {
+    pub async fn poll_chats(&self) -> Result<(), PollError> {
         let futures = join_all(self.messenger_services.iter().map(|e| e.poll())).await;
-        futures.iter().fold(Ok(()), |acc, e| acc.and(*e))
+        futures.into_iter().fold(Ok(()), |acc, e| acc.and(e))
     }
 
     pub async fn create_tenant(&self, name: &str) -> sqlx::Result<Tenant> {

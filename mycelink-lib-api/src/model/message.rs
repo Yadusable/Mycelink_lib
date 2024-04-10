@@ -1,7 +1,9 @@
 use crate::db::actions::message_actions::MessageId;
 use crate::model::contact::ContactDisplay;
 use crate::model::message_types::MessageType;
-use crate::mycelink::protocol::mycelink_chat_message::MycelinkChatMessageId;
+use crate::mycelink::protocol::mycelink_chat_message::{
+    MycelinkChatMessage, MycelinkChatMessageId,
+};
 use serde::{Deserialize, Serialize};
 
 pub struct Message {
@@ -27,6 +29,14 @@ impl ProtocolMessageMeta {
             Ok(id)
         } else {
             Err(())
+        }
+    }
+}
+
+impl From<&MycelinkChatMessage<'_>> for ProtocolMessageMeta {
+    fn from(value: &MycelinkChatMessage) -> Self {
+        ProtocolMessageMeta::Mycelink {
+            id: value.id().clone(),
         }
     }
 }

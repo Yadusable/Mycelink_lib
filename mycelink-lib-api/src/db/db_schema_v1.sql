@@ -31,12 +31,10 @@ CREATE TABLE IF NOT EXISTS chat_messages
     message_content       BLOB    NOT NULL,
     timestamp             INTEGER NOT NULL,
     tenant                TEXT    NOT NULL,
-    FOREIGN KEY (tenant) REFERENCES tenants (display_name),
+    FOREIGN KEY (tenant, chat_id) REFERENCES chat_ids (tenant, id),
     FOREIGN KEY (chat_id) REFERENCES chat_ids (id),
     FOREIGN KEY (contact_id) REFERENCES contacts (id)
 );
-
-
 
 CREATE TABLE IF NOT EXISTS chat_message_reactions
 (

@@ -4,6 +4,7 @@ use crate::model::message::ProtocolMessageMeta;
 use crate::model::message_types::MessageType;
 use crate::model::protocol_config::Protocol;
 use crate::mycelink::mycelink_service::MycelinkService;
+use crate::mycelink::protocol::mycelink_channel::ReceiveMessageError;
 use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
@@ -23,7 +24,7 @@ pub enum PollableService {
 }
 
 impl PollableService {
-    pub async fn poll(&self) -> Result<(), ()> {
+    pub async fn poll(&self) -> Result<(), PollError> {
         match self {
             PollableService::MycelinkService(service) => service.poll().await,
         }
@@ -33,6 +34,23 @@ impl PollableService {
         match self {
             PollableService::MycelinkService(service) => service,
         }
+    }
+}
+
+pub enum PollError {
+    Sqlx(sqlx::Error),
+    Mycelink(ReceiveMessageError),
+}
+
+impl From<sqlx::error::Error> for PollError {
+    fn from(value: sqlx::error::Error) -> Self {
+        Self::Sqlx(value)
+    }
+}
+
+impl From<ReceiveMessageError> for PollError {
+    fn from(value: ReceiveMessageError) -> Self {
+        Self::Mycelink(value)
     }
 }
 

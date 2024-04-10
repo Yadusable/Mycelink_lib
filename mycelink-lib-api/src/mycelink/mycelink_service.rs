@@ -4,9 +4,12 @@ use crate::db::db_connector::DBConnector;
 use crate::model::chat_config::ChatConfig::Mycelink;
 use crate::model::message::ProtocolMessageMeta;
 use crate::model::message_types::MessageType;
-use crate::model::messenger_service::{MessengerService, SendMessageError};
+use crate::model::messenger_service::{MessengerService, PollError, SendMessageError};
 use crate::model::protocol_config::Protocol;
 use crate::mycelink::mycelink_account::MycelinkAccount;
+use crate::mycelink::mycelink_chat::MycelinkChat;
+use crate::mycelink::protocol::mycelink_channel::ReceiveMessageError;
+use futures::StreamExt;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use std::future::Future;
 use std::pin::Pin;
@@ -44,7 +47,18 @@ impl MycelinkService {
         }
     }
 
-    pub async fn poll(&self) -> Result<(), ()> {
+    pub async fn poll(&self) -> Result<(), PollError> {
+        let mut chats = self.db.list_protocol_chats(self).await;
+
+        while let Some(chat) = chats.next().await {
+            let (chat, config) = chat?;
+
+            let mut mycelink_chat: MycelinkChat = config.try_into().unwrap();
+            mycelink_chat
+                .fetch(&self.db, self.fcp_connector.as_ref(), chat.id)
+                .await?; //TODO get actual direct chat id
+        }
+
         todo!()
     }
 }

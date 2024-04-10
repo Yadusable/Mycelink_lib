@@ -1,5 +1,4 @@
 use crate::db::actions::tenant_actions::Tenant;
-use crate::db::actions::Protocol;
 use crate::db::db_connector::DBConnector;
 use crate::model::chat::Chat;
 use crate::model::chat_config::ChatConfig;
@@ -11,7 +10,6 @@ use sqlx::encode::IsNull;
 use sqlx::error::BoxDynError;
 use sqlx::sqlite::{SqliteArgumentValue, SqliteTypeInfo};
 use sqlx::{Decode, Encode, Row, Sqlite, Type};
-use std::sync::Arc;
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct ChatId(i64);
@@ -64,22 +62,25 @@ impl DBConnector<Tenant> {
     pub async fn list_protocol_chats<'a>(
         &'a self,
         messenger_service: &'a dyn MessengerService,
-    ) -> impl Stream<Item = sqlx::Result<Chat>> + 'a {
+    ) -> impl Stream<Item = sqlx::Result<(Chat, ChatConfig)>> + 'a {
         let query = sqlx::query(
-            "SELECT id, display_name, protocol FROM chat_ids WHERE protocol = ? AND tenant = ?;",
+            "SELECT id, display_name, protocol, protocol_config FROM chat_ids WHERE protocol = ? AND tenant = ?;",
         )
         .bind(messenger_service.protocol())
         .bind(self.tenant());
 
         query.fetch(self.pool().await).map(move |e| {
             e.and_then(|row| {
-                Ok(Chat {
-                    id: row.get("id"),
-                    display_name: row.get("display_name"),
-                    alt_name: None,
-                    message_service: messenger_service,
-                    db_connector: self,
-                })
+                Ok((
+                    Chat {
+                        id: row.get("id"),
+                        display_name: row.get("display_name"),
+                        alt_name: None,
+                        message_service: messenger_service,
+                        db_connector: self,
+                    },
+                    serde_json::from_value(row.get("chat_config")).unwrap(),
+                ))
             })
         })
     }

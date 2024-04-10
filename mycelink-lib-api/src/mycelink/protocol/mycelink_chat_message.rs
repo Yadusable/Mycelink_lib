@@ -1,6 +1,8 @@
+use crate::db::actions::message_actions::MessageId;
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::DBConnector;
 use crate::model;
+use crate::model::message::Message;
 use crate::model::message_types::{MessageContent, MessageType};
 use crate::mycelink::protocol::compressed_box::{CompressionHint, CompressionHinting};
 use rand::RngCore;
@@ -57,6 +59,38 @@ pub enum MycelinkChatMessageType<'a> {
         target_message: MycelinkChatMessageId,
         indicator: char,
     },
+}
+
+impl MycelinkChatMessageType<'_> {
+    pub async fn to_message_type(&self, db: &DBConnector<Tenant>) -> MessageType {
+        match self {
+            MycelinkChatMessageType::Standard { content } => MessageType::Standard {
+                content: content.into(),
+            },
+            MycelinkChatMessageType::Reply {
+                thread_start,
+                content,
+            } => MessageType::Reply {
+                content: content.into(),
+                thread_start: db
+                    .mycelink_message_id_to_message_id(thread_start)
+                    .await
+                    .unwrap()
+                    .unwrap(),
+            },
+            MycelinkChatMessageType::Reaction {
+                target_message,
+                indicator,
+            } => MessageType::Reaction {
+                indicator: *indicator,
+                target_message: db
+                    .mycelink_message_id_to_message_id(target_message)
+                    .await
+                    .unwrap()
+                    .unwrap(),
+            },
+        }
+    }
 }
 
 impl CompressionHinting for MycelinkChatMessageType<'_> {
@@ -136,6 +170,16 @@ impl From<model::message_types::MessageContent> for MycelinkChatMessageContent<'
     }
 }
 
+impl From<&MycelinkChatMessageContent<'_>> for MessageContent {
+    fn from(value: &MycelinkChatMessageContent) -> Self {
+        match value {
+            MycelinkChatMessageContent::Text(text) => Self::Text {
+                content: text.clone().into(),
+            },
+        }
+    }
+}
+
 impl<'a> From<&'a model::message_types::MessageContent> for MycelinkChatMessageContent<'a> {
     fn from(value: &'a MessageContent) -> Self {
         match value {
@@ -163,5 +207,11 @@ impl MycelinkChatMessageId {
 impl AsRef<[u8]> for MycelinkChatMessageId {
     fn as_ref(&self) -> &[u8] {
         &self.0
+    }
+}
+
+impl From<MycelinkChatMessage<'_>> for MycelinkChatMessageId {
+    fn from(value: MycelinkChatMessage) -> Self {
+        value.id
     }
 }

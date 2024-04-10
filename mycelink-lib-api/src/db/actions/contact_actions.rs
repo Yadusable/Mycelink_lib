@@ -1,13 +1,17 @@
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::DBConnector;
 use crate::model::contact::ContactDisplay;
+use crate::mycelink::mycelink_contact::MycelinkContact;
 use futures::{Stream, StreamExt};
+use serde::{Deserialize, Serialize};
 use sqlx::database::{HasArguments, HasValueRef};
 use sqlx::encode::IsNull;
 use sqlx::error::BoxDynError;
 use sqlx::sqlite::{SqliteArgumentValue, SqliteTypeInfo};
+use sqlx::types::Json;
 use sqlx::{Decode, Encode, Row, Sqlite, Type};
 
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct ContactId(i64);
 
 impl Decode<'_, Sqlite> for ContactId {
@@ -70,5 +74,20 @@ impl DBConnector<Tenant> {
                 preview_profile_picture: row.try_get("low_res_profile_picture").ok(),
             })
         })
+    }
+
+    pub async fn mycelink_contact_id_to_contact_id(
+        &self,
+        contact: &MycelinkContact,
+    ) -> sqlx::Result<Option<ContactId>> {
+        let query =
+            sqlx::query("SELECT id FROM contacts where connection_details = ? AND tenant = ?;")
+                .bind(Json(contact))
+                .bind(self.tenant());
+
+        query
+            .fetch_optional(self.pool().await)
+            .await
+            .map(|e| e.map(|row| row.get("id")))
     }
 }

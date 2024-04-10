@@ -4,6 +4,9 @@ use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::DBConnector;
 use crate::model::contact::ContactDisplay;
 use crate::model::message::{Message, ProtocolMessageMeta};
+use crate::model::message_types::{MessageContent, MessageType};
+use crate::model::protocol_config::Protocol;
+use crate::mycelink::protocol::mycelink_chat_message::MycelinkChatMessageId;
 use futures::stream::{BoxStream, Map};
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
@@ -59,8 +62,7 @@ impl DBConnector<Tenant> {
         match row {
             None => Ok(None),
             Some(row) => Ok(Some(
-                ciborium::from_reader(row.get::<Vec<u8>, &str>("protocol_message_meta").as_slice())
-                    .unwrap(),
+                serde_json::from_value(row.get("protocol_message_meta")).unwrap(),
             )),
         }
     }
@@ -102,10 +104,8 @@ impl DBConnector<Tenant> {
                     .map(|e| e.into()),
             },
             message_id: row.get("message_id"),
-            protocol_message_meta: ciborium::from_reader(
-                row.get::<Vec<u8>, &str>("protocol_message_meta").as_slice(),
-            )
-            .unwrap(),
+            protocol_message_meta: serde_json::from_value(row.get("protocol_message_meta"))
+                .unwrap(),
             reactions: row
                 .get::<&str, &str>("reactions")
                 .split(',')
@@ -117,8 +117,7 @@ impl DBConnector<Tenant> {
                 .map(|e| MessageId(e.parse().unwrap()))
                 .collect(),
             timestamp: row.get::<i64, &str>("timestamp") as u64,
-            content: ciborium::from_reader(row.get::<Vec<u8>, &str>("message_content").as_slice())
-                .unwrap(),
+            content: serde_json::from_value(row.get("message_content")).unwrap(),
         })
     }
 
@@ -168,10 +167,8 @@ impl DBConnector<Tenant> {
                         .map(|e| e.into()),
                 },
                 message_id: row.get("message_id"),
-                protocol_message_meta: ciborium::from_reader(
-                    row.get::<Vec<u8>, &str>("protocol_message_meta").as_slice(),
-                )
-                .unwrap(),
+                protocol_message_meta: serde_json::from_value(row.get("protocol_message_meta"))
+                    .unwrap(),
                 reactions: row
                     .get::<&str, &str>("reactions")
                     .split(',')
@@ -183,10 +180,7 @@ impl DBConnector<Tenant> {
                     .map(|e| MessageId(e.parse().unwrap()))
                     .collect(),
                 timestamp: row.get::<i64, &str>("timestamp") as u64,
-                content: ciborium::from_reader(
-                    row.get::<Vec<u8>, &str>("message_content").as_slice(),
-                )
-                .unwrap(),
+                content: serde_json::from_value(row.get("message_content")).unwrap(),
             })
         });
 
@@ -239,10 +233,8 @@ impl DBConnector<Tenant> {
                         .map(|e| e.into()),
                 },
                 message_id: row.get("message_id"),
-                protocol_message_meta: ciborium::from_reader(
-                    row.get::<Vec<u8>, &str>("protocol_message_meta").as_slice(),
-                )
-                .unwrap(),
+                protocol_message_meta: serde_json::from_value(row.get("protocol_message_meta"))
+                    .unwrap(),
                 reactions: row
                     .get::<&str, &str>("reactions")
                     .split(',')
@@ -254,31 +246,53 @@ impl DBConnector<Tenant> {
                     .map(|e| MessageId(e.parse().unwrap()))
                     .collect(),
                 timestamp: row.get::<i64, &str>("timestamp") as u64,
-                content: ciborium::from_reader(
-                    row.get::<Vec<u8>, &str>("message_content").as_slice(),
-                )
-                .unwrap(),
+                content: serde_json::from_value(row.get("message_content")).unwrap(),
             })
         });
 
         mapped
     }
 
+    pub async fn mycelink_message_id_to_message_id(
+        &self,
+        mycelink_id: &MycelinkChatMessageId,
+    ) -> sqlx::Result<Option<MessageId>> {
+        let query = sqlx::query(
+            "SELECT message_id
+                 FROM chat_messages
+                 JOIN chat_ids on chat_ids.id = chat_messages.chat_id
+                 WHERE protocol = ?
+                    AND json_extract(protocol_message_meta, '$.id') = ?
+                    AND chat_ids.tenant = ?;",
+        )
+        .bind(Protocol::Mycelink)
+        .bind(mycelink_id.0.as_slice())
+        .bind(self.tenant());
+
+        query
+            .fetch_optional(self.pool().await)
+            .await
+            .map(|e| e.map(|row| row.get("message_id")))
+    }
+
     /// Stores a Message into the database
     /// The id field is ignored as the database generates a new message_id. The new id is then returned.
     pub async fn store_message(
         &self,
-        message: Message,
+        contact_id: ContactId,
+        message_content: &MessageType,
+        protocol_message_meta: ProtocolMessageMeta,
+        timestamp: u64,
         chat_id: ChatId,
     ) -> sqlx::Result<MessageId> {
         let query = sqlx::query("
             INSERT INTO chat_messages (chat_id, contact_id, protocol_message_meta, message_content, timestamp, tenant)
             VALUES (?, ?, ?, ?, ?, ?, ?)")
             .bind(chat_id)
-            .bind(&message.sender.id)
-            .bind(Json(message.protocol_message_meta))
-            .bind(Json(message.content))
-            .bind(message.timestamp as i64)
+            .bind(contact_id)
+            .bind(Json(protocol_message_meta))
+            .bind(Json(message_content))
+            .bind(timestamp as i64)
             .bind(self.tenant());
 
         query

@@ -47,7 +47,15 @@ impl Chat<'_, '_> {
             content: message_type,
         };
 
-        self.db_connector.store_message(message, self.id).await?;
+        self.db_connector
+            .store_message(
+                message.sender.id,
+                &message.content,
+                message.protocol_message_meta,
+                message.timestamp,
+                self.id,
+            )
+            .await?;
 
         Ok(())
     }

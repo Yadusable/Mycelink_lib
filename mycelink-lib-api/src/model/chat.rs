@@ -6,7 +6,7 @@ use crate::model::contact::ContactDisplay;
 use crate::model::message::Message;
 use crate::model::message_types::MessageType;
 use crate::model::messenger_service::{MessengerService, SendMessageError};
-use futures::Stream;
+use futures::{Stream, StreamExt};
 use std::ops::Deref;
 use std::time::UNIX_EPOCH;
 
@@ -19,11 +19,30 @@ pub struct Chat<'a, 'b> {
 }
 
 pub struct MessageStreams<
-    A: Stream<Item = sqlx::Result<Message>>,
-    B: Stream<Item = sqlx::Result<Message>>,
+    A: Stream<Item = sqlx::Result<Message>> + Unpin,
+    B: Stream<Item = sqlx::Result<Message>> + Unpin,
 > {
     next_messages: A,
     previous_messages: B,
+}
+
+impl<
+        A: Stream<Item = sqlx::Result<Message>> + Unpin,
+        B: Stream<Item = sqlx::Result<Message>> + Unpin,
+    > MessageStreams<A, B>
+{
+    pub async fn next(&mut self) -> Result<Message, sqlx::error::Error> {
+        if let Some(message) = self.next_messages.next().await {
+            message
+        } else {
+            todo!()
+            //TODO wait for incomeing messages
+        }
+    }
+
+    pub async fn previous(&mut self) -> Option<sqlx::Result<Message>> {
+        self.previous_messages.next().await
+    }
 }
 
 impl Chat<'_, '_> {

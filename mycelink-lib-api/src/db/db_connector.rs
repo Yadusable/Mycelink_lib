@@ -97,9 +97,7 @@ impl DBConnector<NoTenant> {
 #[cfg(test)]
 impl DBConnector<NoTenant> {
     pub async fn test_tenant(self) -> DBConnector<Tenant> {
-        let mut tx = self.begin().await.unwrap();
-        let tenant = self.create_tenant(&mut tx, "Test Tenant").await.unwrap();
-        tx.commit().await.unwrap();
+        let tenant = self.create_tenant("Test Tenant").await.unwrap();
 
         DBConnector {
             pool: self.pool,

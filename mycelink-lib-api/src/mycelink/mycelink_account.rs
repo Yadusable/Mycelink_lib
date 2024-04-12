@@ -1,9 +1,18 @@
+use crate::crypto::key_exchange_providers::x25519::X25519;
+use crate::crypto::key_exchange_providers::AsymmetricEncryptionProvider;
+use crate::crypto::signature_providers::ed25519::Ed25519;
+use crate::crypto::signature_providers::SignatureProvider;
 use crate::crypto::tagged_types::tagged_keypair::{
     TaggedEncryptionKeyPair, TaggedSignatureKeyPair,
 };
+use crate::db::actions::mycelink_account_actions::MycelinkAccountEntryError;
+use crate::fcp_tools::fcp_put::{fcp_put_inline, FcpPutError};
+use crate::fcp_tools::generate_ssk::{generate_ssk, GenerateSSKKeypairError};
 use crate::model::connection_details::PublicMycelinkConnectionDetails;
-use rand::RngCore;
+use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use serde::{Deserialize, Serialize};
+use sqlx::Error;
+use std::ops::Deref;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MycelinkAccount {
@@ -33,19 +42,43 @@ impl MycelinkAccount {
         &self.request_ssk_key
     }
 
-    pub fn create_new(request_ssk_key: Box<str>, insert_ssk_key: Box<str>) -> Self {
-        let encryption_keys = x25519_dalek::StaticSecret::random_from_rng(rand::rngs::OsRng);
-        let mut signing_key_secret = [0; 32];
-        rand::rngs::OsRng::default().fill_bytes(&mut signing_key_secret);
-        let signing_keys = ed25519_dalek::SigningKey::from_bytes(&signing_key_secret);
+    pub async fn create_new(
+        display_name: impl Into<Box<str>>,
+        fcp: &FCPConnector,
+    ) -> Result<Self, CreateAccountError> {
+        let encryption_keys = vec![X25519::generate_encryption_keypair().into()];
+        let signing_keys = vec![Ed25519::generate_signing_keypair().into()];
 
-        let public_encryption_key = x25519_dalek::PublicKey::from(&encryption_keys);
-        let private_encryption_key = encryption_keys.as_bytes();
+        let ssk_keypair = generate_ssk(fcp).await?;
 
-        let public_signing_key = signing_keys.verifying_key();
-        let private_signing_key = signing_keys.as_bytes();
+        let account = Self {
+            request_ssk_key: ssk_keypair.request_uri,
+            insert_ssk_key: ssk_keypair.insert_uri,
+            encryption_keys,
+            signing_keys,
+        };
 
-        todo!();
+        account.publish(display_name, fcp).await?;
+        Ok(account)
+    }
+
+    async fn publish(
+        &self,
+        display_name: impl Into<Box<str>>,
+        fcp: &FCPConnector,
+    ) -> Result<(), FcpPutError> {
+        let public_details = self.generate_contact_info(display_name);
+        let mut public_details_buf = Vec::new();
+        ciborium::into_writer(&public_details, &mut public_details_buf).unwrap();
+
+        fcp_put_inline(
+            public_details_buf.into(),
+            self.insert_ssk_key.deref().try_into().unwrap(),
+            fcp,
+            "publish account",
+        )
+        .await?;
+        Ok(())
     }
 
     pub fn generate_contact_info(
@@ -74,3 +107,34 @@ impl PartialEq for MycelinkAccount {
 }
 
 impl Eq for MycelinkAccount {}
+
+#[derive(Debug)]
+pub enum CreateAccountError {
+    GenerateSSK(GenerateSSKKeypairError),
+    FcpPut(FcpPutError),
+    AccountEntry(MycelinkAccountEntryError),
+}
+
+impl From<GenerateSSKKeypairError> for CreateAccountError {
+    fn from(value: GenerateSSKKeypairError) -> Self {
+        Self::GenerateSSK(value)
+    }
+}
+
+impl From<FcpPutError> for CreateAccountError {
+    fn from(value: FcpPutError) -> Self {
+        Self::FcpPut(value)
+    }
+}
+
+impl From<MycelinkAccountEntryError> for CreateAccountError {
+    fn from(value: MycelinkAccountEntryError) -> Self {
+        Self::AccountEntry(value)
+    }
+}
+
+impl From<sqlx::Error> for CreateAccountError {
+    fn from(value: sqlx::Error) -> Self {
+        Self::AccountEntry(MycelinkAccountEntryError::SqlxError { inner: value })
+    }
+}

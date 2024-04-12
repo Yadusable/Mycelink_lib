@@ -84,15 +84,11 @@ impl<T: TenantState> DBConnector<T> {
         Ok(Tenant::new(display_name))
     }
 
-    pub async fn delete_tenant(
-        &self,
-        tx: &mut Transaction<'_, DatabaseBackend>,
-        tenant: &Tenant,
-    ) -> Result<(), DeleteTenantError> {
+    pub async fn delete_tenant(&self, tenant: &Tenant) -> Result<(), DeleteTenantError> {
         let query = sqlx::query("DELETE FROM tenants WHERE display_name = ?;");
         let rows_affected = query
             .bind(tenant.display_name())
-            .execute(&mut **tx)
+            .execute(self.pool().await)
             .await?
             .rows_affected();
 
@@ -135,39 +131,36 @@ impl From<sqlx::Error> for DeleteTenantError {
 mod tests {
     use crate::db::actions::tenant_actions::{DeleteTenantError, Tenant};
     use crate::db::db_connector::DBConnector;
+    use futures::StreamExt;
 
     #[tokio::test]
     async fn get_empty_tenants() {
         let connector = DBConnector::new_testing().await;
-        let mut tx = connector.begin().await.unwrap();
 
-        let tenants = connector.get_tenants(&mut tx).await.unwrap();
+        let mut tenants = connector.get_tenants().await;
 
-        assert_eq!(*tenants, []);
-        tx.commit().await.unwrap();
+        assert!(tenants.next().await.is_none());
     }
 
     #[tokio::test]
     async fn create_tenant() {
         let connector = DBConnector::new_testing().await;
-        let mut tx = connector.begin().await.unwrap();
 
-        let tenant = connector
-            .create_tenant(&mut tx, "Testing tenant")
-            .await
-            .unwrap();
+        let tenant = connector.create_tenant("Testing tenant").await.unwrap();
         assert_eq!(tenant.display_name(), "Testing tenant");
 
-        let got_tenants = connector.get_tenants(&mut tx).await.unwrap();
+        let got_tenants: Vec<Tenant> = connector
+            .get_tenants()
+            .await
+            .map(|e| e.unwrap())
+            .collect()
+            .await;
         assert_eq!(*got_tenants, [tenant]);
-
-        tx.commit().await.unwrap();
     }
 
     #[tokio::test]
     async fn create_multiple_tenants() {
         let connector = DBConnector::new_testing().await;
-        let mut tx = connector.begin().await.unwrap();
         let base = "Test tenant";
 
         let mut expected_tenants = vec![];
@@ -175,46 +168,51 @@ mod tests {
         for i in 0..5 {
             expected_tenants.push(
                 connector
-                    .create_tenant(&mut tx, format!("{base} {i}"))
+                    .create_tenant(format!("{base} {i}"))
                     .await
                     .unwrap(),
             );
         }
 
-        let got_tenants = connector.get_tenants(&mut tx).await.unwrap();
+        let got_tenants: Vec<Tenant> = connector
+            .get_tenants()
+            .await
+            .map(|e| e.unwrap())
+            .collect()
+            .await;
 
         assert_eq!(*got_tenants, *expected_tenants);
-        tx.commit().await.unwrap();
     }
 
     #[tokio::test]
     async fn create_delete_tenant() {
         let connector = DBConnector::new_testing().await;
-        let mut tx = connector.begin().await.unwrap();
 
-        let t = connector
-            .create_tenant(&mut tx, "Testing tenant")
-            .await
-            .unwrap();
-        connector.delete_tenant(&mut tx, &t).await.unwrap();
+        let t = connector.create_tenant("Testing tenant").await.unwrap();
+        connector.delete_tenant(&t).await.unwrap();
 
-        assert_eq!(*connector.get_tenants(&mut tx).await.unwrap(), []);
-        tx.commit().await.unwrap();
+        assert_eq!(
+            *connector
+                .get_tenants()
+                .await
+                .map(|e| e.unwrap())
+                .collect::<Vec<Tenant>>()
+                .await,
+            []
+        );
     }
 
     #[tokio::test]
     async fn delete_non_existent_tenant() {
         let connector = DBConnector::new_testing().await;
-        let mut tx = connector.begin().await.unwrap();
 
         let err = connector
-            .delete_tenant(&mut tx, &Tenant::new("Doesn't exist"))
+            .delete_tenant(&Tenant::new("Doesn't exist"))
             .await
             .unwrap_err();
 
         let expected_err = DeleteTenantError::TenantDoesNotExist;
 
         assert_eq!(format!("{err:?}"), format!("{expected_err:?}"));
-        tx.commit().await.unwrap();
     }
 }

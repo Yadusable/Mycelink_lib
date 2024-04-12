@@ -1,4 +1,4 @@
-use crate::api::{APIConnector, LoginStatus};
+use crate::api::APIConnector;
 use crate::db::actions::mycelink_account_actions::MycelinkAccountEntryError;
 use crate::db::actions::tenant_actions::Tenant;
 use crate::fcp_tools::generate_ssk::{generate_ssk, GenerateSSKKeypairError};

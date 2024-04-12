@@ -8,7 +8,6 @@ use crate::model::messenger_service::{MessengerService, PollError, SendMessageEr
 use crate::model::protocol_config::Protocol;
 use crate::mycelink::mycelink_account::MycelinkAccount;
 use crate::mycelink::mycelink_chat::MycelinkChat;
-use crate::mycelink::protocol::mycelink_channel::ReceiveMessageError;
 use futures::StreamExt;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use std::future::Future;

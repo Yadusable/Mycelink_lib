@@ -4,7 +4,7 @@ use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::DBConnector;
 use crate::model::contact::ContactDisplay;
 use crate::model::message::{Message, ProtocolMessageMeta};
-use crate::model::message_types::{MessageContent, MessageType};
+use crate::model::message_types::MessageType;
 use crate::model::protocol_config::Protocol;
 use crate::mycelink::protocol::mycelink_chat_message::MycelinkChatMessageId;
 use futures::stream::{BoxStream, Map};

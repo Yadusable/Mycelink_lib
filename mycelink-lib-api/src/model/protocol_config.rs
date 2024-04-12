@@ -7,8 +7,7 @@ use sqlx::sqlite::SqliteTypeInfo;
 use sqlx::{Decode, Encode, Sqlite, Type};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::str::{FromStr, ParseBoolError};
-use std::string::ParseError;
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize)]
 pub enum ProtocolConfig {

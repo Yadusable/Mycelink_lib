@@ -1,8 +1,6 @@
-use crate::db::actions::message_actions::MessageId;
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::DBConnector;
 use crate::model;
-use crate::model::message::Message;
 use crate::model::message_types::{MessageContent, MessageType};
 use crate::mycelink::protocol::compressed_box::{CompressionHint, CompressionHinting};
 use rand::RngCore;

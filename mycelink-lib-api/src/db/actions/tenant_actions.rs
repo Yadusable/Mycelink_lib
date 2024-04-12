@@ -1,15 +1,13 @@
 use crate::db::db_connector::{DBConnector, DatabaseBackend, TenantState};
-use futures::stream::{BoxStream, Map};
 use futures::{Stream, StreamExt};
 use sqlx::database::{HasArguments, HasValueRef};
 use sqlx::encode::IsNull;
 use sqlx::error::BoxDynError;
-use sqlx::sqlite::{SqliteArgumentValue, SqliteRow, SqliteTypeInfo};
+use sqlx::sqlite::{SqliteArgumentValue, SqliteTypeInfo};
 use sqlx::{Decode, Encode, Row, Sqlite, Transaction, Type};
 use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::str::FromStr;
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct Tenant {

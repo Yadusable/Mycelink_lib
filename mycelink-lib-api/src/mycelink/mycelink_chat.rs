@@ -1,14 +1,12 @@
 use crate::db::actions::chat_actions::ChatId;
-use crate::db::actions::contact_actions::ContactId;
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::DBConnector;
 use crate::fcp_tools::fcp_put::FcpPutError;
-use crate::model::contact::ContactDisplay;
-use crate::model::message::{Message, ProtocolMessageMeta};
+use crate::model::message::ProtocolMessageMeta;
 use crate::model::message_types::MessageType;
 use crate::model::messenger_service::PollError;
 use crate::mycelink::mycelink_contact::MycelinkContact;
-use crate::mycelink::protocol::mycelink_channel::{MycelinkChannel, ReceiveMessageError};
+use crate::mycelink::protocol::mycelink_channel::MycelinkChannel;
 use crate::mycelink::protocol::mycelink_channel_message::MycelinkChannelMessage;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use serde::{Deserialize, Serialize};

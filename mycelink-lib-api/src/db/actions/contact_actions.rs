@@ -1,6 +1,8 @@
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::DBConnector;
+use crate::model::connection_details::PublicConnectionDetails;
 use crate::model::contact::ContactDisplay;
+use crate::model::protocol_config::Protocol;
 use crate::mycelink::mycelink_contact::MycelinkContact;
 use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
@@ -89,5 +91,28 @@ impl DBConnector<Tenant> {
             .fetch_optional(self.pool().await)
             .await
             .map(|e| e.map(|row| row.get("id")))
+    }
+
+    pub async fn add_contact(
+        &self,
+        connection_details: PublicConnectionDetails,
+        display_name: &str,
+        profile_picture: Option<&[u8]>,
+        low_res_profile_picture: Option<&[u8]>,
+    ) -> sqlx::Result<ContactId> {
+        let protocol = match connection_details {
+            PublicConnectionDetails::Mycelink { .. } => Protocol::Mycelink,
+        };
+
+        let query = sqlx::query("INSERT INTO contacts (display_name, profile_picture, low_res_profile_picture, protocol, connection_details, tenant) VALUES (?,?,?,?,?,?);")
+            .bind(display_name)
+            .bind(profile_picture)
+            .bind(low_res_profile_picture)
+            .bind(protocol)
+            .bind(Json(connection_details))
+            .bind(self.tenant());
+
+        let contact_id = query.execute(self.pool().await).await?.last_insert_rowid();
+        Ok(ContactId(contact_id))
     }
 }

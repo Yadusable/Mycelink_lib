@@ -3,9 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum PublicConnectionDetails {
-    Mycelink {
-        inner: PublicMycelinkConnectionDetails,
-    },
+    Mycelink(PublicMycelinkConnectionDetails),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,5 +27,18 @@ impl PublicMycelinkConnectionDetails {
             public_signing_keys,
             public_encryption_keys,
         }
+    }
+
+    pub fn account_request_key(&self) -> &Box<str> {
+        &self.account_request_key
+    }
+    pub fn display_name(&self) -> &Box<str> {
+        &self.display_name
+    }
+    pub fn public_signing_keys(&self) -> &Box<[PublicSigningKey]> {
+        &self.public_signing_keys
+    }
+    pub fn public_encryption_keys(&self) -> &Box<[PublicEncryptionKey]> {
+        &self.public_encryption_keys
     }
 }

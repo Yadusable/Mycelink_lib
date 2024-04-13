@@ -35,3 +35,42 @@ impl AsRef<[u8]> for PublicEncryptionKey {
         }
     }
 }
+
+pub trait KeyOrder {
+    /// Assigns each key variant a value. A higher value prioritizes a key over others with a lower value.
+    /// A priority of smaller than zero indicates that the key algorithm should not be used for future encryption.
+    fn order(&self) -> i8;
+}
+
+impl KeyOrder for &PublicEncryptionKey {
+    fn order(&self) -> i8 {
+        match self {
+            PublicEncryptionKey::X25519(_) => 1,
+        }
+    }
+}
+
+impl KeyOrder for &PublicSigningKey {
+    fn order(&self) -> i8 {
+        match self {
+            PublicSigningKey::Ed25519(_) => 1,
+        }
+    }
+}
+
+pub trait KeyOrderExt: Sized {
+    type Item: KeyOrder;
+
+    /// Chooses a key from an iterator of keys.
+    /// The key with the highest [KeyOrder] will be returned
+    /// Keys with an order smaller than zero will never be returned
+    fn get_recommended_key(self) -> Option<Self::Item>;
+}
+
+impl<T: Iterator<Item = K>, K: KeyOrder> KeyOrderExt for T {
+    type Item = K;
+
+    fn get_recommended_key(self) -> Option<Self::Item> {
+        self.filter(|e| e.order() >= 0).max_by_key(|e| e.order())
+    }
+}

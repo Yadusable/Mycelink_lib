@@ -93,6 +93,19 @@ impl DBConnector<Tenant> {
             .map(|e| e.map(|row| row.get("id")))
     }
 
+    pub async fn get_contact_connection_details(
+        &self,
+        contact_id: ContactId,
+    ) -> sqlx::Result<Option<PublicConnectionDetails>> {
+        let query =
+            sqlx::query("SELECT connection_details FROM contacts WHERE id = ? AND tenant = ?")
+                .bind(contact_id)
+                .bind(self.tenant());
+
+        let res = query.fetch_optional(self.pool().await).await;
+        res.map(|e| e.map(|row| serde_json::from_value(row.get("connection_details")).unwrap()))
+    }
+
     pub async fn add_contact(
         &self,
         connection_details: PublicConnectionDetails,

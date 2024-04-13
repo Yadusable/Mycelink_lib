@@ -1,4 +1,4 @@
-use crate::crypto::key_exchange_providers::AsymmetricEncryptionProvider;
+use crate::crypto::key_exchange_providers::{x25519, AsymmetricEncryptionProvider};
 use crate::crypto::key_material::KeyMaterial;
 use crate::crypto::keypairs::EncryptionKeyPair;
 use serde::{Deserialize, Serialize};
@@ -38,6 +38,14 @@ impl<P: AsymmetricEncryptionProvider> InitiateKeyExchange<P> {
 
     pub fn into_public_key(self) -> P::PublicKey {
         self.public_key
+    }
+}
+
+impl From<EncryptionKeyPair<x25519::X25519>> for InitiateKeyExchange<x25519::X25519> {
+    fn from(value: EncryptionKeyPair<x25519::X25519>) -> Self {
+        Self {
+            public_key: value.public_key,
+        }
     }
 }
 

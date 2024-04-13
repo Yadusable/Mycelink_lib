@@ -7,7 +7,7 @@ use crate::crypto::secret_box::{DefaultSecretBox, SecretBoxError};
 use crate::crypto::symmetrical_providers::{
     DefaultSymmetricEncryptionProvider, SymmetricEncryptionProvider,
 };
-use crate::crypto::tagged_types::keys::PublicEncryptionKey;
+use crate::crypto::tagged_types::keys::{KeyOrderExt, PublicEncryptionKey};
 use crate::crypto::tagged_types::tagged_key_exchange::TaggedInitiateKeyExchange;
 use crate::crypto::tagged_types::tagged_keypair::TaggedEncryptionKeyPair;
 use crate::crypto::tagged_types::tagged_secret_box::TaggedSecretBox;
@@ -185,9 +185,8 @@ impl MycelinkChannel {
             if pending_public_components.len() > 0 {
                 let public_component = pending_public_components
                     .iter()
-                    .fold(&pending_public_components[0], |best, e| {
-                        max_by(e, best, TaggedInitiateKeyExchange::preference)
-                    });
+                    .get_recommended_key()
+                    .unwrap(); //TODO add error handling
 
                 let (answer, new_secret) = public_component.answer();
                 let (next_public_components, next_private_components) = Self::prepare_rekey();

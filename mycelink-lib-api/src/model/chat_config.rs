@@ -1,9 +1,18 @@
+use crate::model::protocol_config::Protocol;
 use crate::mycelink::mycelink_chat::MycelinkChat;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ChatConfig {
     Mycelink(MycelinkChat),
+}
+
+impl ChatConfig {
+    pub fn protocol(&self) -> Protocol {
+        match self {
+            ChatConfig::Mycelink(_) => Protocol::Mycelink,
+        }
+    }
 }
 
 impl TryFrom<ChatConfig> for MycelinkChat {
@@ -15,5 +24,11 @@ impl TryFrom<ChatConfig> for MycelinkChat {
         } else {
             Err(())
         }
+    }
+}
+
+impl From<MycelinkChat> for ChatConfig {
+    fn from(value: MycelinkChat) -> Self {
+        ChatConfig::Mycelink(value)
     }
 }

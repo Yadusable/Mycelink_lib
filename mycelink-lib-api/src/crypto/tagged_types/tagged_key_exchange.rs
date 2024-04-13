@@ -3,7 +3,7 @@ use crate::crypto::key_exchange_providers::x25519::X25519;
 use crate::crypto::key_exchange_providers::AsymmetricEncryptionProvider;
 use crate::crypto::key_material::KeyMaterial;
 use crate::crypto::keypairs::EncryptionKeyPair;
-use crate::crypto::tagged_types::keys::PublicEncryptionKey;
+use crate::crypto::tagged_types::keys::{KeyOrder, PublicEncryptionKey};
 use crate::crypto::tagged_types::tagged_keypair::TaggedEncryptionKeyPair;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
@@ -39,12 +39,18 @@ impl TaggedInitiateKeyExchange {
             }
         }
     }
+}
 
-    pub fn preference(a: &&Self, b: &&Self) -> Ordering {
-        a.preference_priority().cmp(&b.preference_priority())
+impl From<TaggedEncryptionKeyPair> for TaggedInitiateKeyExchange {
+    fn from(value: TaggedEncryptionKeyPair) -> Self {
+        match value {
+            TaggedEncryptionKeyPair::X25519(inner) => Self::X25519(inner.into()),
+        }
     }
+}
 
-    fn preference_priority(&self) -> u8 {
+impl KeyOrder for &TaggedInitiateKeyExchange {
+    fn order(&self) -> i8 {
         match self {
             TaggedInitiateKeyExchange::X25519(_) => 1,
         }

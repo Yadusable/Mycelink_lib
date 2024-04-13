@@ -9,6 +9,7 @@ use crate::fcp_tools::fcp_put::{fcp_put_inline, FcpPutError};
 use crate::model::connection_details::{PublicConnectionDetails, PublicMycelinkConnectionDetails};
 use crate::model::contact::ContactDisplay;
 use crate::model::protocol_config::Protocol;
+use crate::mycelink::mycelink_account::CreateAccountError;
 use crate::mycelink::mycelink_chat::{MycelinkChat, OpenChatError};
 use crate::mycelink::mycelink_contact::MycelinkContact;
 use crate::mycelink::protocol::mycelink_channel_request::{
@@ -42,6 +43,9 @@ impl APIConnector<Tenant> {
                 None,
                 None,
             )
+            .await?;
+
+        self.create_direct_mycelink_chat_for_contact(contact_id)
             .await?;
 
         Ok(ContactDisplay {
@@ -91,6 +95,7 @@ pub enum AddContactError {
     Ciborium(ciborium::de::Error<std::io::Error>),
     FcpGet(FcpGetError),
     Uri(DecodeError),
+    CreateChatError(OpenChatError),
 }
 
 impl From<sqlx::Error> for AddContactError {
@@ -114,5 +119,11 @@ impl From<FcpGetError> for AddContactError {
 impl From<DecodeError> for AddContactError {
     fn from(value: DecodeError) -> Self {
         Self::Uri(value)
+    }
+}
+
+impl From<OpenChatError> for AddContactError {
+    fn from(value: OpenChatError) -> Self {
+        Self::CreateChatError(value)
     }
 }

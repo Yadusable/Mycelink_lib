@@ -15,15 +15,16 @@ use std::fmt::{Display, Formatter};
 use std::io::Error;
 
 pub async fn fcp_put_inline(
-    data: Vec<u8>,
+    data: Box<[u8]>,
     uri: URI,
     fcp_connector: &FCPConnector,
+    intent: &str,
 ) -> Result<PutSuccessfulMessage, FcpPutError> {
-    let identifier = UniqueIdentifier::new("publish account");
+    let identifier = UniqueIdentifier::new(intent);
 
     let put_message = ClientPutMessage {
         uri,
-        content_type: Some("application/json".parse().unwrap()),
+        content_type: None,
         identifier: identifier.clone(),
         verbosity: Verbosity::default(),
         max_retries: 1,

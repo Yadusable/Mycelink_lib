@@ -5,15 +5,15 @@ use crate::crypto::signature_providers::SignatureProvider;
 use crate::crypto::types::byte_array_64::ByteArray64;
 use ed25519_dalek::{Signature, VerifyingKey};
 
+#[derive(Debug)]
 pub struct Ed25519 {}
 impl SignatureProvider for Ed25519 {
-    type Provider = Ed25519;
     type PublicKey = [u8; 32];
     type PrivateKey = [u8; 32];
     type Signature = ByteArray64;
     type Hash = ByteArray64;
 
-    fn generate_signing_keypair() -> SignatureKeyPair<Self::Provider> {
+    fn generate_signing_keypair() -> SignatureKeyPair<Self> {
         let private_key = ed25519_dalek::SigningKey::generate(&mut rand::rngs::OsRng);
         let public_key = private_key.verifying_key();
 

@@ -78,7 +78,7 @@ impl APIConnector<SignedIn, Tenant> {
         todo!()
     }
 
-    pub fn send_message(&self, message: Message, chat: &ChatMetadata) {
+    pub fn send_message(&self, message: Message, chat: &ChatMetadata) -> Result<(), ()> {
         todo!()
     }
 

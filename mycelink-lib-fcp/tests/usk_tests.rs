@@ -93,7 +93,7 @@ async fn test_usk_behaviour() {
         persistence: Persistence::Connection,
         target_filename: None,
         upload_from: UploadType::Direct {
-            data: payload_bytes.to_vec(),
+            data: payload_bytes.into(),
         },
         is_binary_blob: false,
         real_time: true,
@@ -138,7 +138,7 @@ async fn test_usk_behaviour() {
         persistence: Persistence::Connection,
         target_filename: None,
         upload_from: UploadType::Direct {
-            data: payload_bytes.to_vec(),
+            data: payload_bytes.into(),
         },
         is_binary_blob: false,
         real_time: true,

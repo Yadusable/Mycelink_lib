@@ -12,9 +12,10 @@ pub async fn publish_account(
 ) -> Result<(), PublishAccountError> {
     let uri: URI = account.insert_ssk_key().try_into().unwrap();
 
-    let encoded = serde_json::to_string(&account.generate_contact_info(display_name))?;
+    let mut encoded = Vec::new();
+    ciborium::into_writer(&account.generate_contact_info(display_name), &mut encoded).unwrap();
 
-    fcp_put_inline(encoded.into_bytes(), uri, fcp_connector).await?;
+    fcp_put_inline(encoded.into(), uri, fcp_connector, "Publish Account").await?;
 
     Ok(())
 }
@@ -22,7 +23,6 @@ pub async fn publish_account(
 #[derive(Debug)]
 pub enum PublishAccountError {
     PutFailed { inner: FcpPutError },
-    SerdeJson { inner: serde_json::Error },
 }
 
 impl Error for PublishAccountError {}
@@ -39,12 +39,6 @@ impl From<FcpPutError> for PublishAccountError {
     }
 }
 
-impl From<serde_json::Error> for PublishAccountError {
-    fn from(value: serde_json::Error) -> Self {
-        Self::SerdeJson { inner: value }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::fcp_tools::fcp_get::fcp_get_inline;
@@ -56,6 +50,7 @@ mod tests {
 
     #[tokio::test]
     pub async fn test_upload_download() {
+        let _ = env_logger::try_init();
         let fcp_connector =
             create_test_fcp_connector("publish_account::test_upload_download").await;
 
@@ -75,11 +70,10 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(
-            get.data,
-            serde_json::to_string(&account.generate_contact_info("Test Account"))
-                .unwrap()
-                .into_bytes()
-        )
+        let mut payload = Vec::new();
+        ciborium::into_writer(&account.generate_contact_info("Test Account"), &mut payload)
+            .unwrap();
+
+        assert_eq!(get.data, payload.into())
     }
 }

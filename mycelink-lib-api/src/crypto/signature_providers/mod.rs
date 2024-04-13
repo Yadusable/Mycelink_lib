@@ -6,7 +6,6 @@ use hex::FromHexError;
 use serde::{Deserialize, Serialize};
 
 pub trait SignatureProvider {
-    type Provider: SignatureProvider;
     type PublicKey: Clone
         + Serialize
         + for<'de> Deserialize<'de>
@@ -28,10 +27,10 @@ pub trait SignatureProvider {
 
     type Hash;
 
-    fn generate_signing_keypair() -> SignatureKeyPair<Self::Provider>;
+    fn generate_signing_keypair() -> SignatureKeyPair<Self>;
     fn sign<H: HashProvider<Hash = Self::Hash>>(
         hash: &Self::Hash,
-        keypair: &SignatureKeyPair<Self::Provider>,
+        keypair: &SignatureKeyPair<Self>,
     ) -> Self::Signature;
     fn verify<H: HashProvider<Hash = Self::Hash>>(
         signature: &Self::Signature,

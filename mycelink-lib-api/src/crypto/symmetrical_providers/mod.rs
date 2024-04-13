@@ -1,9 +1,11 @@
 pub mod xchacha20poly1305;
 
 use crate::crypto::key_material::KeyMaterial;
-use crate::crypto::secret_box::DecryptionFailed;
+use crate::crypto::symmetrical_providers::xchacha20poly1305::XChaCha20Poly1305;
 use hex::FromHexError;
 use serde::{Deserialize, Serialize};
+
+pub type DefaultSymmetricEncryptionProvider = XChaCha20Poly1305;
 
 pub trait SymmetricEncryptionProvider {
     type Key: Clone
@@ -19,5 +21,5 @@ pub trait SymmetricEncryptionProvider {
     fn generate_key_from_material(material: KeyMaterial) -> Self::Key;
 
     fn encrypt(data: Box<[u8]>, key: &Self::Key) -> Self::Encrypted;
-    fn decrypt(data: Self::Encrypted, key: &Self::Key) -> Result<Box<[u8]>, DecryptionFailed>;
+    fn decrypt(data: Self::Encrypted, key: &Self::Key) -> Result<Box<[u8]>, ()>;
 }

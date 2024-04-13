@@ -9,7 +9,7 @@ pub struct AllDataMessage {
     pub identifier: UniqueIdentifier,
     pub content_type: ContentType,
 
-    pub data: Vec<u8>,
+    pub data: Box<[u8]>,
 }
 
 impl TryFrom<Message> for AllDataMessage {
@@ -62,7 +62,7 @@ mod tests {
             ]
             .into(),
             Some(MessagePayload {
-                data: r"Hello World".into(),
+                data: r"Hello World".as_bytes().into(),
                 data_len_identifier: "DataLength".into(),
             }),
         );
@@ -72,7 +72,7 @@ mod tests {
         assert_eq!(
             parsed,
             AllDataMessage {
-                data: r"Hello World".to_string().into_bytes(),
+                data: r"Hello World".as_bytes().into(),
                 content_type: ContentType::from_str("text/plain;charset=utf8").unwrap(),
                 identifier,
             }

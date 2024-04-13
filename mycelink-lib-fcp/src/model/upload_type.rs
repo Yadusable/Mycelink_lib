@@ -2,7 +2,7 @@ use crate::model::uri::URI;
 use std::path::Path;
 
 pub enum UploadType {
-    Direct { data: Vec<u8> },
+    Direct { data: Box<[u8]> },
     Disk { path: Box<Path> },
     Redirect { target: URI },
 }

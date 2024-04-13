@@ -5,7 +5,7 @@ use crate::crypto::signature_providers::SignatureProvider;
 use crate::crypto::types::byte_array_64::ByteArray64;
 use ed25519_dalek::{Signature, VerifyingKey};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ed25519 {}
 impl SignatureProvider for Ed25519 {
     type PublicKey = [u8; 32];

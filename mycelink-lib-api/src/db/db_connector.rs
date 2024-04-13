@@ -1,13 +1,14 @@
 use crate::db::schema_updater::update_to_newest_version;
-use crate::model::tenant::Tenant;
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::{Executor, Pool, Row, Sqlite, SqlitePool, Transaction};
 
+use crate::db::actions::tenant_actions::Tenant;
 #[cfg(test)]
 use sqlx::sqlite::SqlitePoolOptions;
 
 pub type DatabaseBackend = Sqlite;
 
+#[derive(Clone)]
 pub struct DBConnector<T: TenantState> {
     pool: Pool<Sqlite>,
     tenant: T,
@@ -38,7 +39,9 @@ impl DBConnector<NoTenant> {
         SqlitePool::connect_with(connect_options).await
     }
 
-    async fn current_schema_version(pool: &Pool<DatabaseBackend>) -> Result<u32, sqlx::Error> {
+    pub(crate) async fn current_schema_version(
+        pool: &Pool<DatabaseBackend>,
+    ) -> Result<u32, sqlx::Error> {
         let mut conn = pool.acquire().await?;
 
         let res = conn
@@ -47,11 +50,22 @@ impl DBConnector<NoTenant> {
 
         Ok(res.map(|row| row.get::<u32, _>(0)).unwrap_or(0))
     }
+
+    pub fn enter_tenant(self, tenant: Tenant) -> DBConnector<Tenant> {
+        DBConnector {
+            pool: self.pool,
+            tenant,
+        }
+    }
 }
 
 impl<T: TenantState> DBConnector<T> {
     pub async fn begin(&self) -> Result<Transaction<DatabaseBackend>, sqlx::Error> {
         self.pool.begin().await
+    }
+
+    pub async fn pool(&self) -> &Pool<Sqlite> {
+        &self.pool
     }
 }
 

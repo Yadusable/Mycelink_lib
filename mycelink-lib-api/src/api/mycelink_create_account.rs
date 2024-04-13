@@ -1,13 +1,13 @@
-use crate::api::{APIConnector, LoginStatus};
+use crate::api::APIConnector;
 use crate::db::actions::mycelink_account_actions::MycelinkAccountEntryError;
+use crate::db::actions::tenant_actions::Tenant;
 use crate::fcp_tools::generate_ssk::{generate_ssk, GenerateSSKKeypairError};
 use crate::fcp_tools::publish_account::{publish_account, PublishAccountError};
-use crate::model::mycelink_account::MycelinkAccount;
-use crate::model::tenant::Tenant;
+use crate::mycelink::mycelink_account::MycelinkAccount;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-impl<L: LoginStatus> APIConnector<L, Tenant> {
+impl APIConnector<Tenant> {
     pub async fn create_mycelink_account(
         &self,
         display_name: impl Into<Box<str>>,

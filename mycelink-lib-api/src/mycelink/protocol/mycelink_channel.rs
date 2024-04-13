@@ -7,20 +7,26 @@ use crate::crypto::secret_box::{DefaultSecretBox, SecretBoxError};
 use crate::crypto::symmetrical_providers::{
     DefaultSymmetricEncryptionProvider, SymmetricEncryptionProvider,
 };
+use crate::crypto::tagged_types::keys::PublicEncryptionKey;
+use crate::crypto::tagged_types::tagged_key_exchange::TaggedInitiateKeyExchange;
+use crate::crypto::tagged_types::tagged_keypair::TaggedEncryptionKeyPair;
+use crate::crypto::tagged_types::tagged_secret_box::TaggedSecretBox;
 use crate::fcp_tools::fcp_get::{fcp_get_inline, FcpGetError};
 use crate::fcp_tools::fcp_put::{fcp_put_inline, FcpPutError};
-use crate::model::keys::PublicEncryptionKey;
-use crate::model::tagged_key_exchange::TaggedInitiateKeyExchange;
-use crate::model::tagged_keypair::TaggedEncryptionKeyPair;
-use crate::model::tagged_secret_box::TaggedSecretBox;
-use crate::mycelink::compressed_box::{CompressedBox, CompressionHint, CompressionHinting};
-use crate::mycelink::mycelink_channel::ReceiveMessageError::{FailedRekey, NotInitialized};
-use crate::mycelink::mycelink_channel_message::MycelinkChannelMessage::FinalMessage;
-use crate::mycelink::mycelink_channel_message::{InitialChannelMessage, MycelinkChannelMessage};
-use crate::mycelink::mycelink_chat_message::{
+use crate::mycelink::protocol::compressed_box::{
+    CompressedBox, CompressionHint, CompressionHinting,
+};
+use crate::mycelink::protocol::mycelink_channel::ReceiveMessageError::{
+    FailedRekey, NotInitialized,
+};
+use crate::mycelink::protocol::mycelink_channel_message::MycelinkChannelMessage::FinalMessage;
+use crate::mycelink::protocol::mycelink_channel_message::{
+    InitialChannelMessage, MycelinkChannelMessage,
+};
+use crate::mycelink::protocol::mycelink_chat_message::{
     MycelinkChatMessage, MycelinkChatMessageId, MycelinkChatMessageType,
 };
-use crate::mycelink::mycelink_ratchet_key_generator::MycelinkRatchetKeyGenerator;
+use crate::mycelink::protocol::mycelink_ratchet_key_generator::MycelinkRatchetKeyGenerator;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use mycelink_lib_fcp::messages::get_failed::DATA_NOT_FOUND_CODE;
 use mycelink_lib_fcp::model::priority_class::PriorityClass;
@@ -137,7 +143,7 @@ impl MycelinkChannel {
 
     pub async fn send_channel_message(
         &mut self,
-        message: &MycelinkChannelMessage,
+        message: &MycelinkChannelMessage<'_>,
         fcp_connector: &FCPConnector,
     ) -> Result<(), FcpPutError> {
         let rekeyed = self.rekey_send_if_possible(message, fcp_connector).await?;
@@ -153,7 +159,7 @@ impl MycelinkChannel {
 
     pub async fn send_chat_message(
         &mut self,
-        message: MycelinkChatMessageType,
+        message: MycelinkChatMessageType<'_>,
         fcp_connector: &FCPConnector,
     ) -> Result<MycelinkChatMessageId, FcpPutError> {
         let message_id = MycelinkChatMessageId::new();
@@ -172,7 +178,7 @@ impl MycelinkChannel {
 
     async fn rekey_send_if_possible(
         &mut self,
-        attached_message: &MycelinkChannelMessage,
+        attached_message: &MycelinkChannelMessage<'_>,
         fcp_connector: &FCPConnector,
     ) -> Result<bool, FcpPutError> {
         if let Some(pending_public_components) = &self.pending_public_components {
@@ -332,11 +338,11 @@ mod tests {
     use crate::crypto::kdf_provider::KdfProviderTag;
     use crate::crypto::key_exchange::InitiateKeyExchange;
     use crate::crypto::key_exchange_providers::DefaultAsymmetricEncryptionProvider;
+    use crate::crypto::tagged_types::tagged_key_exchange::TaggedAnswerKeyExchange;
     use crate::fcp_tools::fcp_put::FcpPutError;
-    use crate::model::tagged_key_exchange::TaggedAnswerKeyExchange;
-    use crate::mycelink::mycelink_channel::MycelinkChannel;
-    use crate::mycelink::mycelink_channel_message::MycelinkChannelMessage;
-    use crate::mycelink::mycelink_chat_message::{
+    use crate::mycelink::protocol::mycelink_channel::MycelinkChannel;
+    use crate::mycelink::protocol::mycelink_channel_message::MycelinkChannelMessage;
+    use crate::mycelink::protocol::mycelink_chat_message::{
         MycelinkChatMessage, MycelinkChatMessageContent, MycelinkChatMessageType,
     };
     use crate::test::create_test_fcp_connector;

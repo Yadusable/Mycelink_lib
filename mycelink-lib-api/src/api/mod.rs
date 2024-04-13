@@ -1,18 +1,26 @@
 pub mod mycelink_create_account;
 
+use crate::db::actions::contact_actions::ContactId;
+use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::{DBConnector, NoTenant, TenantState};
-use crate::model::chat::ChatMetadata;
-use crate::model::contact::ContactId;
-use crate::model::media::{Media, MediaId};
-use crate::model::message::Message;
-use crate::model::mycelink_account::MycelinkAccount;
-use crate::model::tenant::Tenant;
+use crate::model::chat::Chat;
+use crate::model::config::Config;
+use crate::model::contact::ContactDisplay;
+use crate::model::messenger_service::{PollError, PollableService};
+use crate::model::protocol_config::{Protocol, ProtocolConfig};
+use crate::mycelink::mycelink_account::MycelinkAccount;
+use crate::mycelink::mycelink_service::MycelinkService;
+use futures::future::join_all;
+use futures::{Stream, StreamExt};
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
+use std::error::Error;
+use std::sync::Arc;
+use tokio::net::TcpStream;
 
-pub struct APIConnector<L: LoginStatus, T: TenantState> {
-    login_status: L,
+pub struct APIConnector<T: TenantState> {
     db_connector: DBConnector<T>,
-    fcp_connector: FCPConnector,
+    fcp_connector: Arc<FCPConnector>,
+    messenger_services: Vec<PollableService>,
 }
 
 pub trait LoginStatus {}
@@ -24,65 +32,116 @@ impl LoginStatus for NotSignedIn {}
 
 impl LoginStatus for SignedIn {}
 
-impl APIConnector<NotSignedIn, Tenant> {
-    pub fn open_mycelink_account(&self) -> APIConnector<SignedIn, Tenant> {
-        todo!()
-    }
-}
+impl APIConnector<NoTenant> {
+    pub async fn enter_tenant(self, tenant: Tenant) -> APIConnector<Tenant> {
+        let mut res = APIConnector {
+            db_connector: self.db_connector.enter_tenant(tenant),
+            fcp_connector: self.fcp_connector,
+            messenger_services: self.messenger_services,
+        };
 
-impl APIConnector<NotSignedIn, NoTenant> {
-    pub fn enter_tenant() -> APIConnector<NotSignedIn, Tenant> {
-        todo!()
-    }
-}
+        let mut protocol_configs = res.db_connector.get_protocol_configs().await;
 
-impl<L: LoginStatus, T: TenantState> APIConnector<L, T> {
-    pub fn new(
-        db_connector: DBConnector<T>,
-        fcp_connector: FCPConnector,
-    ) -> APIConnector<NotSignedIn, T> {
-        APIConnector {
-            login_status: (),
-            db_connector,
-            fcp_connector,
+        while let Some(Ok(protocol_config)) = protocol_configs.next().await {
+            match protocol_config {
+                ProtocolConfig::Mycelink { account } => {
+                    res.messenger_services
+                        .push(PollableService::MycelinkService(MycelinkService::new(
+                            res.db_connector.clone(),
+                            res.fcp_connector.clone(),
+                            account,
+                        )))
+                }
+            }
         }
+
+        drop(protocol_configs);
+
+        res
     }
 
-    pub fn list_account_public_ssk_keys(&self) -> Box<[Box<str>]> {
-        todo!();
+    pub async fn poll_chats(&self) -> Result<(), PollError> {
+        let futures = join_all(self.messenger_services.iter().map(|e| e.poll())).await;
+        futures.into_iter().fold(Ok(()), |acc, e| acc.and(e))
     }
 
-    pub fn list_account_ssk_keys(&self) -> Box<[Box<str>]> {
-        todo!();
+    pub async fn create_tenant(&self, name: &str) -> sqlx::Result<Tenant> {
+        if !self.db_connector.has_tenant(name).await? {
+            return self.db_connector.create_tenant(name).await;
+        }
+        Err(sqlx::error::Error::RowNotFound)
     }
 
+    pub async fn list_tenants(&self) -> impl Stream<Item = sqlx::Result<Tenant>> + '_ {
+        self.db_connector.get_tenants().await
+    }
+
+    pub async fn init(config: &Config) -> Result<APIConnector<NoTenant>, Box<dyn Error>> {
+        let fcp_connector =
+            FCPConnector::new(TcpStream::connect(config.fcp_endpoint).await?, "Mycelink").await?;
+        let db_connector =
+            DBConnector::new(config.database_path.as_os_str().to_str().unwrap()).await?;
+
+        Ok(Self {
+            db_connector,
+            fcp_connector: Arc::new(fcp_connector),
+            messenger_services: Vec::new(),
+        })
+    }
+
+    pub async fn enter_demo(self) -> sqlx::Result<APIConnector<Tenant>> {
+        if !self.db_connector.has_tenant("demo").await? {
+            self.db_connector.create_tenant("demo").await?;
+        }
+        Ok(self.enter_tenant(Tenant::new("demo")).await)
+    }
+}
+
+impl<T: TenantState> APIConnector<T> {
     pub fn health_check(&self) -> Result<(), ()> {
         Ok(())
     }
 }
 
-impl APIConnector<SignedIn, Tenant> {
-    pub fn add_mycelink_contact(
+impl APIConnector<Tenant> {
+    pub async fn get_enabled_protocols(
         &self,
-        account_info_request_key: &str,
-        display_name: impl Into<Box<str>>,
-    ) {
+    ) -> impl Stream<Item = sqlx::Result<ProtocolConfig>> + '_ {
+        self.db_connector.get_protocol_configs().await
+    }
+
+    pub async fn add_contact(&self, account_request_key: Box<str>) -> Result<ContactDisplay, ()> {
         todo!()
     }
 
-    pub fn mycelink_friend_request(&self, contact_identifier: &ContactId) {
+    pub async fn create_direct_chat(&self, contact_id: ContactId) -> Result<Chat, ()> {
         todo!()
     }
 
-    pub fn list_friend_request(&self) -> Box<[Box<str>]> {
-        todo!()
+    pub async fn list_chats(&self) -> impl Stream<Item = sqlx::Result<Chat>> + '_ {
+        self.db_connector
+            .list_chats(self.messenger_services.as_slice())
+            .await
     }
 
-    pub fn send_message(&self, message: Message, chat: &ChatMetadata) -> Result<(), ()> {
-        todo!()
+    pub async fn current_mycelink_account_request_key(&self) -> Result<Box<str>, ()> {
+        let res = self
+            .db_connector
+            .get_protocol_config(Protocol::Mycelink)
+            .await;
+
+        match res {
+            Ok(ok) => ok.ok_or(()).map(|e| {
+                TryInto::<MycelinkAccount>::try_into(e)
+                    .unwrap()
+                    .request_ssk_key()
+                    .into()
+            }),
+            Err(_) => Err(()),
+        }
     }
 
-    pub fn get_media(&self, media_id: MediaId) -> Media {
-        todo!()
+    pub async fn list_contacts(&self) -> impl Stream<Item = sqlx::Result<ContactDisplay>> + '_ {
+        self.db_connector.list_contacts().await
     }
 }

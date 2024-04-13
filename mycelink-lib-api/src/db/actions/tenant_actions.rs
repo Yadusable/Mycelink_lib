@@ -1,35 +1,86 @@
 use crate::db::db_connector::{DBConnector, DatabaseBackend, TenantState};
-use crate::model::tenant::Tenant;
-use sqlx::{Row, Transaction};
+use futures::{Stream, StreamExt};
+use sqlx::database::{HasArguments, HasValueRef};
+use sqlx::encode::IsNull;
+use sqlx::error::BoxDynError;
+use sqlx::sqlite::{SqliteArgumentValue, SqliteTypeInfo};
+use sqlx::{Decode, Encode, Row, Sqlite, Transaction, Type};
+use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-impl<T: TenantState> DBConnector<T> {
-    pub async fn get_tenants(
-        &self,
-        tx: &mut Transaction<'_, DatabaseBackend>,
-    ) -> Result<Box<[Tenant]>, sqlx::Error> {
-        let statement = sqlx::query("SELECT (display_name) FROM tenants;");
-        let rows = statement.fetch_all(&mut **tx).await?;
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub struct Tenant {
+    display_name: Box<str>,
+}
 
-        let mut res = Vec::with_capacity(rows.len());
-        for row in rows.into_iter() {
-            res.push(Tenant::new(
-                row.try_get::<'_, Box<str>, &str>("display_name")?,
-            ))
+impl Tenant {
+    pub(crate) fn new(display_name: impl Into<Box<str>>) -> Tenant {
+        Self {
+            display_name: display_name.into(),
         }
-        Ok(res.into())
+    }
+
+    pub fn display_name(&self) -> &str {
+        &self.display_name
+    }
+}
+
+impl Encode<'_, Sqlite> for &Tenant {
+    fn encode_by_ref(&self, buf: &mut <Sqlite as HasArguments<'_>>::ArgumentBuffer) -> IsNull {
+        buf.push(SqliteArgumentValue::Text(Cow::Owned(
+            self.display_name().into(),
+        )));
+        IsNull::No
+    }
+}
+impl Type<Sqlite> for Tenant {
+    fn type_info() -> SqliteTypeInfo {
+        <&str as Type<Sqlite>>::type_info()
+    }
+}
+impl Decode<'_, Sqlite> for Tenant {
+    fn decode(value: <Sqlite as HasValueRef<'_>>::ValueRef) -> Result<Self, BoxDynError> {
+        let value = <&str as Decode<Sqlite>>::decode(value)?;
+        Ok(Tenant {
+            display_name: value.into(),
+        })
+    }
+}
+impl<T: Into<Box<str>>> From<T> for Tenant {
+    fn from(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
+impl<T: TenantState> DBConnector<T> {
+    pub async fn get_tenants(&self) -> impl Stream<Item = sqlx::Result<Tenant>> + '_ {
+        let statement = sqlx::query("SELECT (display_name) FROM tenants;");
+        let rows = statement.fetch(self.pool().await);
+
+        rows.map(|e| e.map(|e| e.get("display_name")))
+    }
+
+    pub async fn has_tenant(&self, tenant: &str) -> sqlx::Result<bool> {
+        let query = sqlx::query("SELECT COUNT(*) as count FROM tenants WHERE display_name = ?;")
+            .bind(tenant);
+
+        let res = query.fetch_one(self.pool().await).await?;
+
+        Ok(res.get::<i32, &str>("count") > 0)
     }
 
     pub async fn create_tenant(
         &self,
-        tx: &mut Transaction<'_, DatabaseBackend>,
         display_name: impl Into<Box<str>>,
     ) -> Result<Tenant, sqlx::Error> {
         let display_name = display_name.into();
 
         let query = sqlx::query("INSERT INTO tenants VALUES (?);");
-        query.bind(display_name.clone()).execute(&mut **tx).await?;
+        query
+            .bind(display_name.clone())
+            .execute(self.pool().await)
+            .await?;
         Ok(Tenant::new(display_name))
     }
 
@@ -82,9 +133,8 @@ impl From<sqlx::Error> for DeleteTenantError {
 
 #[cfg(test)]
 mod tests {
-    use crate::db::actions::tenant_actions::DeleteTenantError;
+    use crate::db::actions::tenant_actions::{DeleteTenantError, Tenant};
     use crate::db::db_connector::DBConnector;
-    use crate::model::tenant::Tenant;
 
     #[tokio::test]
     async fn get_empty_tenants() {

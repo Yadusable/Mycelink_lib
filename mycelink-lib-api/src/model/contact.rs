@@ -1,29 +1,15 @@
-use crate::model::connection_details::PublicConnectionDetails;
-use serde::{Deserialize, Serialize};
+use crate::db::actions::contact_actions::ContactId;
+use crate::model::protocol_config::Protocol;
 
-#[derive(Serialize, Deserialize)]
-pub struct Contact {
-    #[serde(flatten)]
-    internal_id: ContactId,
-    display_name: Box<str>,
-    public_connection_details: PublicConnectionDetails,
+pub struct ContactDisplay {
+    pub id: ContactId,
+    pub display_name: Box<str>,
+    pub alternative_name: Option<Box<str>>,
+    pub protocol: Protocol,
+    /// A low res version of the profile picture
+    pub preview_profile_picture: Option<Box<[u8]>>,
 }
 
-impl Contact {
-    pub fn new(
-        internal_id: ContactId,
-        display_name: impl Into<Box<str>>,
-        public_connection_details: PublicConnectionDetails,
-    ) -> Self {
-        Self {
-            internal_id,
-            display_name: display_name.into(),
-            public_connection_details,
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct ContactId {
-    contact_id: u32,
+pub enum ContactSetupDetails {
+    Mycelink { account_request_key: Box<str> },
 }

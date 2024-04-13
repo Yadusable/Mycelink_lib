@@ -1,5 +1,5 @@
 use crate::fcp_tools::fcp_put::{fcp_put_inline, FcpPutError};
-use crate::model::mycelink_account::MycelinkAccount;
+use crate::mycelink::mycelink_account::MycelinkAccount;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use mycelink_lib_fcp::model::uri::URI;
 use std::error::Error;
@@ -44,7 +44,7 @@ mod tests {
     use crate::fcp_tools::fcp_get::fcp_get_inline;
     use crate::fcp_tools::generate_ssk::generate_ssk;
     use crate::fcp_tools::publish_account::publish_account;
-    use crate::model::mycelink_account::MycelinkAccount;
+    use crate::mycelink::mycelink_account::MycelinkAccount;
     use crate::test::create_test_fcp_connector;
     use mycelink_lib_fcp::model::priority_class::PriorityClass;
 

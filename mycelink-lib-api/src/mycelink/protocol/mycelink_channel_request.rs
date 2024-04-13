@@ -1,13 +1,15 @@
 use crate::crypto::kdf_provider::KdfProviderTag;
 use crate::crypto::secret_box::SecretBoxError;
 use crate::crypto::signed_box::SignedBoxError;
+use crate::crypto::tagged_types::keys::PublicSigningKey;
+use crate::crypto::tagged_types::tagged_key_exchange::{
+    TaggedAnswerKeyExchange, TaggedInitiateKeyExchange,
+};
+use crate::crypto::tagged_types::tagged_keypair::TaggedEncryptionKeyPair;
+use crate::crypto::tagged_types::tagged_secret_box::TaggedSecretBox;
+use crate::crypto::tagged_types::tagged_signed_box::TaggedSignedBox;
 use crate::fcp_tools::fcp_put::FcpPutError;
-use crate::model::keys::PublicSigningKey;
-use crate::model::tagged_key_exchange::{TaggedAnswerKeyExchange, TaggedInitiateKeyExchange};
-use crate::model::tagged_keypair::TaggedEncryptionKeyPair;
-use crate::model::tagged_secret_box::TaggedSecretBox;
-use crate::model::tagged_signed_box::TaggedSignedBox;
-use crate::mycelink::mycelink_channel::{MycelinkChannel, ReceiveMessageError};
+use crate::mycelink::protocol::mycelink_channel::{MycelinkChannel, ReceiveMessageError};
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use serde::{Deserialize, Serialize};
 

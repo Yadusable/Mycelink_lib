@@ -1,42 +1,36 @@
-use crate::model::connection_details::PublicMycelinkConnectionDetails;
-use crate::model::keys::{
-    PrivateEncryptionKey, PrivateSigningKey, PublicEncryptionKey, PublicSigningKey,
+use crate::crypto::tagged_types::tagged_keypair::{
+    TaggedEncryptionKeyPair, TaggedSignatureKeyPair,
 };
+use crate::model::connection_details::PublicMycelinkConnectionDetails;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MycelinkAccount {
     request_ssk_key: Box<str>,
     insert_ssk_key: Box<str>,
-    public_encryption_key: PublicEncryptionKey,
-    private_encryption_key: PrivateEncryptionKey,
+    encryption_keys: Vec<TaggedEncryptionKeyPair>,
 
-    public_signing_key: PublicSigningKey,
-    private_signing_key: PrivateSigningKey,
+    signing_keys: Vec<TaggedSignatureKeyPair>,
 }
 
 impl MycelinkAccount {
-    pub fn request_ssk_key(&self) -> &str {
-        &self.request_ssk_key
-    }
-
     pub fn new(
         request_ssk_key: Box<str>,
         insert_ssk_key: Box<str>,
-        public_encryption_key: PublicEncryptionKey,
-        private_encryption_key: PrivateEncryptionKey,
-        public_signing_key: PublicSigningKey,
-        private_signing_key: PrivateSigningKey,
+        encryption_keys: Vec<TaggedEncryptionKeyPair>,
+        signing_keys: Vec<TaggedSignatureKeyPair>,
     ) -> Self {
         Self {
             request_ssk_key,
             insert_ssk_key,
-            public_encryption_key,
-            private_encryption_key,
-            public_signing_key,
-            private_signing_key,
+            encryption_keys,
+            signing_keys,
         }
+    }
+
+    pub fn request_ssk_key(&self) -> &str {
+        &self.request_ssk_key
     }
 
     pub fn create_new(request_ssk_key: Box<str>, insert_ssk_key: Box<str>) -> Self {
@@ -61,12 +55,22 @@ impl MycelinkAccount {
         PublicMycelinkConnectionDetails::new(
             self.request_ssk_key.clone(),
             display_name,
-            self.public_signing_key.clone(),
-            self.public_encryption_key.clone(),
+            self.signing_keys.iter().map(|e| e.public_key()).collect(),
+            self.encryption_keys
+                .iter()
+                .map(|e| e.public_key())
+                .collect(),
         )
     }
-
     pub(crate) fn insert_ssk_key(&self) -> &str {
         &self.insert_ssk_key
     }
 }
+
+impl PartialEq for MycelinkAccount {
+    fn eq(&self, other: &Self) -> bool {
+        self.request_ssk_key == other.request_ssk_key
+    }
+}
+
+impl Eq for MycelinkAccount {}

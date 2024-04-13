@@ -1,7 +1,7 @@
 use crate::crypto::hash_provider::sha512::Sha512;
 use crate::crypto::signature_providers::ed25519::Ed25519;
 use crate::crypto::signed_box::{SignedBox, SignedBoxError};
-use crate::model::keys::PublicSigningKey;
+use crate::crypto::tagged_types::keys::PublicSigningKey;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -1,6 +1,8 @@
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::{DBConnector, DatabaseBackend};
+use crate::model::protocol_config::Protocol;
 use crate::mycelink::mycelink_account::MycelinkAccount;
+use sqlx::types::Json;
 use sqlx::{Row, Transaction};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -15,15 +17,13 @@ impl DBConnector<Tenant> {
             return Err(MycelinkAccountEntryError::AccountAlreadyExists);
         }
 
-        let account_json = serde_json::to_string(account)?;
-
         let query = sqlx::query(
             "INSERT INTO protocol_config_per_tenant (tenant, protocol, config) VALUES (?,?,?)",
         );
         query
-            .bind(self.tenant().display_name())
-            .bind("mycelink")
-            .bind(account_json)
+            .bind(self.tenant())
+            .bind(Protocol::Mycelink)
+            .bind(Json(account))
             .execute(&mut **tx)
             .await?;
 
@@ -34,17 +34,14 @@ impl DBConnector<Tenant> {
         &self,
         tx: &mut Transaction<'_, DatabaseBackend>,
     ) -> Result<Option<MycelinkAccount>, MycelinkAccountEntryError> {
-        let query = sqlx::query("SELECT (config) FROM protocol_config_per_tenant WHERE protocol = 'mycelink' AND tenant = ?");
-        let res = query
-            .bind(self.tenant().display_name())
-            .fetch_optional(&mut **tx)
-            .await?;
+        let query = sqlx::query("SELECT (config) FROM protocol_config_per_tenant WHERE protocol = 'Mycelink' AND tenant = ?")
+            .bind(self.tenant());
+        let res = query.fetch_optional(&mut **tx).await?;
 
         if let Some(row) = res {
-            let config: Box<str> = row.try_get("config")?;
+            let account: Json<MycelinkAccount> = row.try_get("config")?;
 
-            let account: MycelinkAccount = serde_json::from_str(&config)?;
-            Ok(Some(account))
+            Ok(Some(account.0))
         } else {
             Ok(None)
         }
@@ -54,7 +51,6 @@ impl DBConnector<Tenant> {
 #[derive(Debug)]
 pub enum MycelinkAccountEntryError {
     SqlxError { inner: sqlx::Error },
-    SerdeJson { inner: serde_json::error::Error },
     AccountAlreadyExists,
 }
 
@@ -64,7 +60,6 @@ impl Display for MycelinkAccountEntryError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             MycelinkAccountEntryError::SqlxError { inner } => inner.fmt(f),
-            MycelinkAccountEntryError::SerdeJson { inner } => inner.fmt(f),
             MycelinkAccountEntryError::AccountAlreadyExists => {
                 write!(f, "Account already exists")
             }
@@ -78,16 +73,12 @@ impl From<sqlx::Error> for MycelinkAccountEntryError {
     }
 }
 
-impl From<serde_json::Error> for MycelinkAccountEntryError {
-    fn from(value: serde_json::Error) -> Self {
-        MycelinkAccountEntryError::SerdeJson { inner: value }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::db::db_connector::DBConnector;
     use crate::mycelink::mycelink_account::MycelinkAccount;
+    use crate::test::create_test_fcp_connector;
+    use std::ops::Deref;
 
     #[tokio::test]
     async fn get_nonexistent_account() {
@@ -100,11 +91,13 @@ mod tests {
 
     #[tokio::test]
     async fn create_and_get_account() {
+        let fcp = create_test_fcp_connector("create_and_get_account").await;
         let connector = DBConnector::new_testing().await.test_tenant().await;
         let mut tx = connector.begin().await.unwrap();
 
-        let account =
-            MycelinkAccount::create_new("dummy request key".into(), "dummy insert key".into());
+        let account = MycelinkAccount::create_new("dummy account", fcp.deref())
+            .await
+            .unwrap();
 
         connector
             .create_mycelink_account_entry(&mut tx, &account)

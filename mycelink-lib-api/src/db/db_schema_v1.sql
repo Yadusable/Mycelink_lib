@@ -8,6 +8,7 @@ CREATE TABLE protocols
     name TEXT PRIMARY KEY
 );
 
+
 INSERT INTO protocols (name)
 VALUES ('Mycelink');
 

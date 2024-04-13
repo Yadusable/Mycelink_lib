@@ -10,6 +10,7 @@ pub enum PublicConnectionDetails {
 pub struct PublicMycelinkConnectionDetails {
     account_request_key: Box<str>,
     display_name: Box<str>,
+    profile_picture: Option<Box<[u8]>>,
     public_signing_keys: Box<[PublicSigningKey]>,
     public_encryption_keys: Box<[PublicEncryptionKey]>,
 }
@@ -24,6 +25,7 @@ impl PublicMycelinkConnectionDetails {
         Self {
             account_request_key,
             display_name: display_name.into(),
+            profile_picture: None,
             public_signing_keys,
             public_encryption_keys,
         }

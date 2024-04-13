@@ -1,4 +1,5 @@
 use crate::db::db_connector::DatabaseBackend;
+use crate::model::protocol_config::Protocol;
 use sqlx::{Pool, Transaction};
 
 pub async fn update_to_newest_version(
@@ -25,6 +26,7 @@ async fn update_to_v1(
 
             let query = sqlx::query("INSERT INTO database_metadata (schema_version) VALUES (1)");
             query.execute(&mut **tx).await?;
+
             Ok(())
         }
     }

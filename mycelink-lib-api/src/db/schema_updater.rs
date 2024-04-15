@@ -1,5 +1,4 @@
 use crate::db::db_connector::DatabaseBackend;
-use crate::model::protocol_config::Protocol;
 use sqlx::{Pool, Transaction};
 
 pub async fn update_to_newest_version(

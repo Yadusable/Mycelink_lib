@@ -61,7 +61,7 @@ impl DBConnector<Tenant> {
 
     pub async fn list_protocol_chats<'a>(
         &'a self,
-        messenger_service: &'a dyn MessengerService,
+        messenger_service: &'a (dyn MessengerService + Send + Sync),
     ) -> impl Stream<Item = sqlx::Result<(Chat, ChatConfig)>> + 'a {
         let query = sqlx::query(
             "SELECT id, display_name, protocol, protocol_config FROM chat_ids WHERE protocol = ? AND tenant = ?;",

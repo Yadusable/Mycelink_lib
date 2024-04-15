@@ -1,10 +1,10 @@
-use crate::db::db_connector::{DBConnector, DatabaseBackend, TenantState};
+use crate::db::db_connector::{DBConnector, TenantState};
 use futures::{Stream, StreamExt};
 use sqlx::database::{HasArguments, HasValueRef};
 use sqlx::encode::IsNull;
 use sqlx::error::BoxDynError;
 use sqlx::sqlite::{SqliteArgumentValue, SqliteTypeInfo};
-use sqlx::{Decode, Encode, Row, Sqlite, Transaction, Type};
+use sqlx::{Decode, Encode, Row, Sqlite, Type};
 use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::{Display, Formatter};

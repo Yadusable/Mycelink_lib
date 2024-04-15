@@ -11,7 +11,6 @@ use crate::fcp_tools::generate_ssk::{generate_ssk, GenerateSSKKeypairError};
 use crate::model::connection_details::PublicMycelinkConnectionDetails;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use serde::{Deserialize, Serialize};
-use sqlx::Error;
 use std::ops::Deref;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

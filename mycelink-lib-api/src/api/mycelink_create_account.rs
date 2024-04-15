@@ -5,7 +5,7 @@ use std::ops::Deref;
 
 impl APIConnector<Tenant> {
     pub async fn create_mycelink_account(
-        &self,
+        &mut self,
         display_name: impl Into<Box<str>>,
     ) -> Result<Box<str>, CreateAccountError> {
         let account = MycelinkAccount::create_new(display_name, self.fcp_connector.deref()).await?;
@@ -16,6 +16,8 @@ impl APIConnector<Tenant> {
             .await?;
 
         tx.commit().await?;
+
+        self.load_services().await;
 
         Ok(account.request_ssk_key().into())
     }

@@ -16,6 +16,7 @@ use futures::{Stream, StreamExt};
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use std::error::Error;
 use std::sync::Arc;
+use sqlx::testing::TestTermination;
 use tokio::net::TcpStream;
 
 pub struct APIConnector<T: TenantState> {
@@ -41,30 +42,12 @@ impl APIConnector<NoTenant> {
             messenger_services: self.messenger_services,
         };
 
-        let mut protocol_configs = res.db_connector.get_protocol_configs().await;
-
-        while let Some(Ok(protocol_config)) = protocol_configs.next().await {
-            match protocol_config {
-                ProtocolConfig::Mycelink { account } => {
-                    res.messenger_services
-                        .push(PollableService::MycelinkService(MycelinkService::new(
-                            res.db_connector.clone(),
-                            res.fcp_connector.clone(),
-                            account,
-                        )))
-                }
-            }
-        }
-
-        drop(protocol_configs);
-
+        res.load_services().await;
+        
         res
     }
 
-    pub async fn poll_chats(&self) -> Result<(), PollError> {
-        let futures = join_all(self.messenger_services.iter().map(|e| e.poll())).await;
-        futures.into_iter().fold(Ok(()), |acc, e| acc.and(e))
-    }
+
 
     pub async fn create_tenant(&self, name: &str) -> sqlx::Result<Tenant> {
         if !self.db_connector.has_tenant(name).await? {
@@ -105,6 +88,30 @@ impl<T: TenantState> APIConnector<T> {
 }
 
 impl APIConnector<Tenant> {
+    async fn load_services(&mut self) {
+        let mut protocol_configs = self.db_connector.get_protocol_configs().await;
+
+        while let Some(Ok(protocol_config)) = protocol_configs.next().await {
+            match protocol_config {
+                ProtocolConfig::Mycelink { account } => {
+                    self.messenger_services
+                        .push(PollableService::MycelinkService(MycelinkService::new(
+                            self.db_connector.clone(),
+                            self.fcp_connector.clone(),
+                            account,
+                        )))
+                }
+            }
+        }
+
+        drop(protocol_configs);
+    }
+
+    pub async fn poll_chats(&self) -> Result<(), PollError> {
+        let futures = join_all(self.messenger_services.iter().map(|e| e.poll())).await;
+        futures.into_iter().fold(Ok(()), |acc, e| acc.and(e))
+    }
+    
     pub async fn get_enabled_protocols(
         &self,
     ) -> impl Stream<Item = sqlx::Result<ProtocolConfig>> + '_ {

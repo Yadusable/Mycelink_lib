@@ -13,7 +13,7 @@ impl DBConnector<Tenant> {
         tx: &mut Transaction<'_, DatabaseBackend>,
         account: &MycelinkAccount,
     ) -> Result<(), MycelinkAccountEntryError> {
-        if self.get_mycelink_account(tx).await?.is_some() {
+        if self.get_mycelink_account().await?.is_some() {
             return Err(MycelinkAccountEntryError::AccountAlreadyExists);
         }
 
@@ -82,7 +82,7 @@ mod tests {
         let connector = DBConnector::new_testing().await.test_tenant().await;
         let mut tx = connector.begin().await.unwrap();
 
-        assert_eq!(connector.get_mycelink_account(&mut tx).await.unwrap(), None);
+        assert_eq!(connector.get_mycelink_account().await.unwrap(), None);
         tx.commit().await.unwrap();
     }
 

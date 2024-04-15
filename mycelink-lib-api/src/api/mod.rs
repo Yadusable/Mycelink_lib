@@ -35,7 +35,7 @@ impl LoginStatus for NotSignedIn {}
 impl LoginStatus for SignedIn {}
 
 impl APIConnector<NoTenant> {
-    pub async fn fcp_connector(&self) -> Arc<FCPConnector> {
+    pub fn fcp_connector(&self) -> Arc<FCPConnector> {
         self.fcp_connector.clone()
     }
 

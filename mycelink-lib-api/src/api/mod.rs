@@ -35,6 +35,10 @@ impl LoginStatus for NotSignedIn {}
 impl LoginStatus for SignedIn {}
 
 impl APIConnector<NoTenant> {
+    pub async fn fcp_connector(&self) -> Arc<FCPConnector> {
+        self.fcp_connector.clone()
+    }
+
     pub async fn enter_tenant(self, tenant: Tenant) -> APIConnector<Tenant> {
         let mut res = APIConnector {
             db_connector: self.db_connector.enter_tenant(tenant),

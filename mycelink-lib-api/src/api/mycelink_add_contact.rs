@@ -31,7 +31,7 @@ impl APIConnector<Tenant> {
         let contact_id = self
             .db_connector
             .add_contact(
-                PublicConnectionDetails::Mycelink(public_details),
+                &PublicConnectionDetails::Mycelink(public_details),
                 display_name.deref(),
                 None,
                 None,
@@ -69,9 +69,10 @@ impl APIConnector<Tenant> {
                 .unwrap();
 
             let contact = MycelinkContact::new(display.display_name, connection_details);
+            let account = self.db_connector.get_mycelink_account().await?.unwrap();
 
-            let chat =
-                MycelinkChat::new_direct_chat(self.contact, self.fcp_connector.deref()).await?;
+            let chat = MycelinkChat::new_direct_chat(&account, contact, self.fcp_connector.deref())
+                .await?;
             let display_name: Box<str> = chat.display_name().into();
             Ok(self
                 .db_connector

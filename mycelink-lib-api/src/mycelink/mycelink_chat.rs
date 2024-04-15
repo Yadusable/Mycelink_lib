@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MycelinkChat {
-    chat_type: MycelinkChatType,
+    pub chat_type: MycelinkChatType,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -44,7 +44,7 @@ impl MycelinkChat {
             .ok_or(OpenChatError::NoValidKey)?;
 
         let (request, channel) =
-            MycelinkChannelRequest::create(recipient_pub_key.clone(), fcp).await?;
+            MycelinkChannelRequest::create(account, recipient_pub_key.clone(), fcp).await?;
 
         let signed_request = request.sign(account);
         let encrypted_request = signed_request.encrypt(recipient_pub_key);

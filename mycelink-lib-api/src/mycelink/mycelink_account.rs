@@ -29,7 +29,7 @@ pub struct MycelinkAccount {
 
     channel_request_dropbox_insert_key: Box<str>, // ! Public and therefore spamable
     channel_request_dropbox_request_key: Box<str>, // ! Public as insert is public
-    channel_request_dropbox_known: u32,
+    pub(crate) channel_request_dropbox_known: u32,
 
     encryption_keys: Vec<TaggedEncryptionKeyPair>,
     signing_keys: Vec<TaggedSignatureKeyPair>,

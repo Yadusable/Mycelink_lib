@@ -7,7 +7,19 @@ pub enum PublicConnectionDetails {
     Mycelink(PublicMycelinkConnectionDetails),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl TryFrom<PublicConnectionDetails> for PublicMycelinkConnectionDetails {
+    type Error = ();
+
+    fn try_from(value: PublicConnectionDetails) -> Result<Self, Self::Error> {
+        if let PublicConnectionDetails::Mycelink(val) = value {
+            Ok(val)
+        } else {
+            Err(())
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PublicMycelinkConnectionDetails {
     account_request_key: Box<str>,
     display_name: Box<str>,

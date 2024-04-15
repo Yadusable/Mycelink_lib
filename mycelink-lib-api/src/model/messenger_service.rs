@@ -1,10 +1,13 @@
 use crate::db::actions::chat_actions::ChatId;
+use crate::fcp_tools::fcp_get::FcpGetError;
 use crate::fcp_tools::fcp_put::FcpPutError;
 use crate::model::message::ProtocolMessageMeta;
 use crate::model::message_types::MessageType;
 use crate::model::protocol_config::Protocol;
 use crate::mycelink::mycelink_service::MycelinkService;
 use crate::mycelink::protocol::mycelink_channel::ReceiveMessageError;
+use crate::mycelink::protocol::mycelink_channel_request::OpenChannelError;
+use ciborium::de::Error;
 use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
@@ -40,6 +43,9 @@ impl PollableService {
 pub enum PollError {
     Sqlx(sqlx::Error),
     Mycelink(ReceiveMessageError),
+    Ciborium(ciborium::de::Error<std::io::Error>),
+    OpenChannelError(OpenChannelError),
+    FcpGetError(FcpGetError),
 }
 
 impl From<sqlx::error::Error> for PollError {
@@ -51,6 +57,24 @@ impl From<sqlx::error::Error> for PollError {
 impl From<ReceiveMessageError> for PollError {
     fn from(value: ReceiveMessageError) -> Self {
         Self::Mycelink(value)
+    }
+}
+
+impl From<ciborium::de::Error<std::io::Error>> for PollError {
+    fn from(value: Error<std::io::Error>) -> Self {
+        Self::Ciborium(value)
+    }
+}
+
+impl From<OpenChannelError> for PollError {
+    fn from(value: OpenChannelError) -> Self {
+        Self::OpenChannelError(value)
+    }
+}
+
+impl From<FcpGetError> for PollError {
+    fn from(value: FcpGetError) -> Self {
+        Self::FcpGetError(value)
     }
 }
 

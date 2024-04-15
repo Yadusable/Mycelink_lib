@@ -9,16 +9,16 @@ impl APIConnector<Tenant> {
         display_name: impl Into<Box<str>>,
     ) -> Result<Box<str>, CreateAccountError> {
         let account = MycelinkAccount::create_new(display_name, self.fcp_connector.deref()).await?;
-
+        let request_ssk_key = account.request_ssk_key().into();
         let mut tx = self.db_connector.begin().await?;
         self.db_connector
-            .create_mycelink_account_entry(&mut tx, &account)
+            .create_mycelink_account_entry(&mut tx, account)
             .await?;
 
         tx.commit().await?;
 
         self.load_services().await;
 
-        Ok(account.request_ssk_key().into())
+        Ok(request_ssk_key)
     }
 }

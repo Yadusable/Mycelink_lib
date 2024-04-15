@@ -15,6 +15,7 @@ use crate::mycelink::mycelink_account::{MycelinkAccount, NoMatchingKeyError};
 use crate::mycelink::protocol::mycelink_channel::{MycelinkChannel, ReceiveMessageError};
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use serde::{Deserialize, Serialize};
+use std::borrow::Borrow;
 
 /// Basic Structure for creating a new [MycelinkChannel]
 ///
@@ -29,6 +30,7 @@ use serde::{Deserialize, Serialize};
 /// This exchange is secure only if Alice can trust Bob's public key and Bob trusts Alice's signing key.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MycelinkChannelRequest {
+    contact_request_key: Box<str>,
     keys: TaggedAnswerKeyExchange,
     kdf: KdfProviderTag,
 }
@@ -36,7 +38,7 @@ pub struct MycelinkChannelRequest {
 impl MycelinkChannelRequest {
     pub async fn accept(
         self,
-        keypair_candidates: &[impl AsRef<TaggedEncryptionKeyPair>],
+        keypair_candidates: &[impl Borrow<TaggedEncryptionKeyPair>],
         fcp_connector: &FCPConnector,
     ) -> Result<MycelinkChannel, OpenChannelError> {
         if let Ok(key) = self.keys.try_complete_multiple(keypair_candidates) {
@@ -53,6 +55,7 @@ impl MycelinkChannelRequest {
         Err(OpenChannelError::NoMatchingKey)
     }
     pub async fn create(
+        own_account: &MycelinkAccount,
         responder_public_key: TaggedInitiateKeyExchange,
         fcp_connector: &FCPConnector,
     ) -> Result<(Self, MycelinkChannel), OpenChannelError> {
@@ -62,6 +65,7 @@ impl MycelinkChannelRequest {
 
         Ok((
             Self {
+                contact_request_key: own_account.request_ssk_key().into(),
                 keys: answer.clone(),
                 kdf,
             },
@@ -78,6 +82,10 @@ impl MycelinkChannelRequest {
 
     pub fn sign(self, account: &MycelinkAccount) -> SignedMycelinkChannelRequest {
         SignedMycelinkChannelRequest(account.sign(self))
+    }
+
+    pub fn contact_request_key(&self) -> &str {
+        &self.contact_request_key
     }
 }
 

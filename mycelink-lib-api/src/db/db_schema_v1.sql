@@ -82,3 +82,4 @@ CREATE TABLE IF NOT EXISTS contacts
 
     FOREIGN KEY (tenant, protocol) REFERENCES protocol_config_per_tenant (tenant, protocol)
 );
+

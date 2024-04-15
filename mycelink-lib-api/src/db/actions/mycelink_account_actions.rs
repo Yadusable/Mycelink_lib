@@ -43,6 +43,15 @@ impl DBConnector<Tenant> {
             Ok(None)
         }
     }
+
+    pub async fn update_mycelink_account(&self, account: MycelinkAccount) -> sqlx::Result<()> {
+        let config = ProtocolConfig::Mycelink { account };
+        let update = sqlx::query("UPDATE protocol_config_per_tenant SET config = ? WHERE protocol = 'Mycelink' AND tenant = ?,")
+            .bind(Json(config))
+            .bind(self.tenant());
+        update.execute(self.pool().await).await?;
+        Ok(())
+    }
 }
 
 #[derive(Debug)]

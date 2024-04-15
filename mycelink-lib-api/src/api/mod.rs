@@ -1,7 +1,6 @@
 pub mod mycelink_add_contact;
 pub mod mycelink_create_account;
 
-use crate::db::actions::contact_actions::ContactId;
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::{DBConnector, NoTenant, TenantState};
 use crate::model::chat::Chat;

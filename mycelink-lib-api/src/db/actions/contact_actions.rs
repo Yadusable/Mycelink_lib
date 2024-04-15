@@ -3,6 +3,7 @@ use crate::db::db_connector::DBConnector;
 use crate::model::connection_details::PublicConnectionDetails;
 use crate::model::contact::ContactDisplay;
 use crate::model::protocol_config::Protocol;
+use crate::mycelink::mycelink_account::MycelinkAccount;
 use crate::mycelink::mycelink_contact::MycelinkContact;
 use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
@@ -108,7 +109,7 @@ impl DBConnector<Tenant> {
 
     pub async fn add_contact(
         &self,
-        connection_details: PublicConnectionDetails,
+        connection_details: &PublicConnectionDetails,
         display_name: &str,
         profile_picture: Option<&[u8]>,
         low_res_profile_picture: Option<&[u8]>,
@@ -127,5 +128,49 @@ impl DBConnector<Tenant> {
 
         let contact_id = query.execute(self.pool().await).await?.last_insert_rowid();
         Ok(ContactId(contact_id))
+    }
+
+    pub async fn get_mycelink_connection_contact_by_request_key(
+        &self,
+        request_key: &str,
+    ) -> sqlx::Result<Option<(MycelinkContact, ContactDisplay)>> {
+        let query = sqlx::query(
+            "
+        SELECT connection_details, id, display_name, alternative_name, low_res_profile_picture, protocol
+        FROM contacts
+        WHERE protocol = 'Mycelink'
+            AND json_extract(connection_details, '$.Mycelink.account_request_key') = ?
+            AND  tenant = ?",
+        )
+        .bind(request_key)
+        .bind(self.tenant());
+
+        let row = query.fetch_optional(self.pool().await).await;
+
+        row.map(|e| {
+            e.map(|row| {
+                (
+                    MycelinkContact::new(
+                        row.get("display_name"),
+                        serde_json::from_value::<PublicConnectionDetails>(
+                            row.get("connection_details"),
+                        )
+                        .unwrap()
+                        .try_into()
+                        .unwrap(),
+                    ),
+                    ContactDisplay {
+                        id: row.get("id"),
+                        display_name: row.get("display_name"),
+                        alternative_name: row.get("alternative_name"),
+                        protocol: row.get("protocol"),
+                        preview_profile_picture: row
+                            .try_get::<Vec<u8>, &str>("low_res_profile_picture")
+                            .ok()
+                            .map(|e| e.into()),
+                    },
+                )
+            })
+        })
     }
 }

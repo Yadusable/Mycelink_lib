@@ -11,15 +11,17 @@ use crate::fcp_tools::generate_ssk::{generate_ssk, GenerateSSKKeypairError};
 use crate::model::connection_details::PublicMycelinkConnectionDetails;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use serde::{Deserialize, Serialize};
-use sqlx::Error;
 use std::ops::Deref;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MycelinkAccount {
     request_ssk_key: Box<str>,
     insert_ssk_key: Box<str>,
-    encryption_keys: Vec<TaggedEncryptionKeyPair>,
 
+    channel_request_dropbox_insert_key: Box<str>, // ! Public and therefore spamable
+    channel_request_dropbox_request_key: Box<str>, // ! Public as insert is public
+
+    encryption_keys: Vec<TaggedEncryptionKeyPair>,
     signing_keys: Vec<TaggedSignatureKeyPair>,
 }
 
@@ -27,12 +29,16 @@ impl MycelinkAccount {
     pub fn new(
         request_ssk_key: Box<str>,
         insert_ssk_key: Box<str>,
+        channel_request_dropbox_insert_key: Box<str>,
+        channel_request_dropbox_request_key: Box<str>,
         encryption_keys: Vec<TaggedEncryptionKeyPair>,
         signing_keys: Vec<TaggedSignatureKeyPair>,
     ) -> Self {
         Self {
             request_ssk_key,
             insert_ssk_key,
+            channel_request_dropbox_insert_key,
+            channel_request_dropbox_request_key,
             encryption_keys,
             signing_keys,
         }
@@ -50,10 +56,21 @@ impl MycelinkAccount {
         let signing_keys = vec![Ed25519::generate_signing_keypair().into()];
 
         let ssk_keypair = generate_ssk(fcp).await?;
+        let dropbox_keypair = generate_ssk(fcp).await?;
 
         let account = Self {
             request_ssk_key: ssk_keypair.request_uri,
             insert_ssk_key: ssk_keypair.insert_uri,
+            channel_request_dropbox_request_key: format!(
+                "{}/requests",
+                dropbox_keypair.request_uri
+            )
+            .into(),
+            channel_request_dropbox_insert_key: format!(
+                "{}/requests/0",
+                dropbox_keypair.insert_uri.replace("SSK@", "USK@")
+            )
+            .into(),
             encryption_keys,
             signing_keys,
         };
@@ -80,7 +97,6 @@ impl MycelinkAccount {
         .await?;
         Ok(())
     }
-
     pub fn generate_contact_info(
         &self,
         display_name: impl Into<Box<str>>,
@@ -91,8 +107,9 @@ impl MycelinkAccount {
             self.signing_keys.iter().map(|e| e.public_key()).collect(),
             self.encryption_keys
                 .iter()
-                .map(|e| e.public_key())
+                .map(|e| e.clone().into())
                 .collect(),
+            self.channel_request_dropbox_insert_key.clone(),
         )
     }
     pub(crate) fn insert_ssk_key(&self) -> &str {

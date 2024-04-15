@@ -116,10 +116,6 @@ impl APIConnector<Tenant> {
         self.db_connector.get_protocol_configs().await
     }
 
-    pub async fn create_direct_chat(&self, contact_id: ContactId) -> Result<Chat, ()> {
-        todo!()
-    }
-
     pub async fn list_chats(&self) -> impl Stream<Item = sqlx::Result<Chat>> + '_ {
         self.db_connector
             .list_chats(self.messenger_services.as_slice())

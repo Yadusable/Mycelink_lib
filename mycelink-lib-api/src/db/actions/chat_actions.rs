@@ -9,6 +9,7 @@ use sqlx::database::{HasArguments, HasValueRef};
 use sqlx::encode::IsNull;
 use sqlx::error::BoxDynError;
 use sqlx::sqlite::{SqliteArgumentValue, SqliteTypeInfo};
+use sqlx::types::Json;
 use sqlx::{Decode, Encode, Row, Sqlite, Type};
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
@@ -92,5 +93,21 @@ impl DBConnector<Tenant> {
         Ok(row.map(|row| {
             ciborium::from_reader(row.get::<Vec<u8>, &str>("protocol_config").as_slice()).unwrap()
         }))
+    }
+
+    pub async fn create_chat(
+        &self,
+        display_name: &str,
+        protocol_config: ChatConfig,
+    ) -> sqlx::Result<ChatId> {
+        let query = sqlx::query("INSERT INTO chat_ids (display_name, protocol, protocol_config, tenant) VALUES (?,?,?,?);")
+            .bind(display_name)
+            .bind(protocol_config.protocol())
+            .bind(Json(protocol_config))
+            .bind(self.tenant());
+
+        let res = query.execute(self.pool().await).await?;
+
+        Ok(ChatId(res.last_insert_rowid()))
     }
 }

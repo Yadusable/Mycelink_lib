@@ -1,4 +1,5 @@
-use crate::crypto::tagged_types::keys::{PublicEncryptionKey, PublicSigningKey};
+use crate::crypto::tagged_types::keys::PublicSigningKey;
+use crate::crypto::tagged_types::tagged_key_exchange::TaggedInitiateKeyExchange;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -12,7 +13,8 @@ pub struct PublicMycelinkConnectionDetails {
     display_name: Box<str>,
     profile_picture: Option<Box<[u8]>>,
     public_signing_keys: Box<[PublicSigningKey]>,
-    public_encryption_keys: Box<[PublicEncryptionKey]>,
+    public_encryption_keys: Box<[TaggedInitiateKeyExchange]>,
+    channel_request_droppoint: Box<str>,
 }
 
 impl PublicMycelinkConnectionDetails {
@@ -20,7 +22,8 @@ impl PublicMycelinkConnectionDetails {
         account_request_key: Box<str>,
         display_name: impl Into<Box<str>>,
         public_signing_keys: Box<[PublicSigningKey]>,
-        public_encryption_keys: Box<[PublicEncryptionKey]>,
+        public_encryption_keys: Box<[TaggedInitiateKeyExchange]>,
+        channel_request_droppoint: Box<str>,
     ) -> Self {
         Self {
             account_request_key,
@@ -28,6 +31,7 @@ impl PublicMycelinkConnectionDetails {
             profile_picture: None,
             public_signing_keys,
             public_encryption_keys,
+            channel_request_droppoint,
         }
     }
 
@@ -40,7 +44,10 @@ impl PublicMycelinkConnectionDetails {
     pub fn public_signing_keys(&self) -> &Box<[PublicSigningKey]> {
         &self.public_signing_keys
     }
-    pub fn public_encryption_keys(&self) -> &Box<[PublicEncryptionKey]> {
+    pub fn public_encryption_keys(&self) -> &Box<[TaggedInitiateKeyExchange]> {
         &self.public_encryption_keys
+    }
+    pub fn channel_request_droppoint(&self) -> &Box<str> {
+        &self.channel_request_droppoint
     }
 }

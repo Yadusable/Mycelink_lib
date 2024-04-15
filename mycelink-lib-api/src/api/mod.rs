@@ -141,4 +141,11 @@ impl APIConnector<Tenant> {
     pub async fn list_contacts(&self) -> impl Stream<Item = sqlx::Result<ContactDisplay>> + '_ {
         self.db_connector.list_contacts().await
     }
+
+    pub async fn get_mycelink_account_request_key(&self) -> sqlx::Result<Option<Box<str>>> {
+        self.db_connector
+            .get_mycelink_account()
+            .await
+            .map(|e| e.map(|acc| acc.request_ssk_key().into()))
+    }
 }

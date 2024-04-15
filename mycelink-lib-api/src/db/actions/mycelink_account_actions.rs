@@ -1,6 +1,6 @@
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::{DBConnector, DatabaseBackend};
-use crate::model::protocol_config::Protocol;
+use crate::model::protocol_config::{Protocol, ProtocolConfig};
 use crate::mycelink::mycelink_account::MycelinkAccount;
 use sqlx::types::Json;
 use sqlx::{Row, Transaction};
@@ -11,7 +11,7 @@ impl DBConnector<Tenant> {
     pub async fn create_mycelink_account_entry(
         &self,
         tx: &mut Transaction<'_, DatabaseBackend>,
-        account: &MycelinkAccount,
+        account: MycelinkAccount,
     ) -> Result<(), MycelinkAccountEntryError> {
         if self.get_mycelink_account().await?.is_some() {
             return Err(MycelinkAccountEntryError::AccountAlreadyExists);
@@ -23,7 +23,7 @@ impl DBConnector<Tenant> {
         query
             .bind(self.tenant())
             .bind(Protocol::Mycelink)
-            .bind(Json(account))
+            .bind(Json(ProtocolConfig::Mycelink { account }))
             .execute(&mut **tx)
             .await?;
 
@@ -36,9 +36,9 @@ impl DBConnector<Tenant> {
         let res = query.fetch_optional(self.pool().await).await?;
 
         if let Some(row) = res {
-            let account: Json<MycelinkAccount> = row.try_get("config")?;
+            let account: Json<ProtocolConfig> = row.try_get("config")?;
 
-            Ok(Some(account.0))
+            Ok(account.0.try_into().ok())
         } else {
             Ok(None)
         }

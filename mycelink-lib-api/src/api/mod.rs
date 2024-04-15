@@ -11,12 +11,12 @@ use crate::model::messenger_service::{PollError, PollableService};
 use crate::model::protocol_config::{Protocol, ProtocolConfig};
 use crate::mycelink::mycelink_account::MycelinkAccount;
 use crate::mycelink::mycelink_service::MycelinkService;
-use futures::future::join_all;
+use futures::future::{join_all, BoxFuture};
 use futures::{Stream, StreamExt};
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
+use sqlx::testing::TestTermination;
 use std::error::Error;
 use std::sync::Arc;
-use sqlx::testing::TestTermination;
 use tokio::net::TcpStream;
 
 pub struct APIConnector<T: TenantState> {
@@ -35,6 +35,10 @@ impl LoginStatus for NotSignedIn {}
 impl LoginStatus for SignedIn {}
 
 impl APIConnector<NoTenant> {
+    pub fn fcp_connector(&self) -> Arc<FCPConnector> {
+        self.fcp_connector.clone()
+    }
+
     pub async fn enter_tenant(self, tenant: Tenant) -> APIConnector<Tenant> {
         let mut res = APIConnector {
             db_connector: self.db_connector.enter_tenant(tenant),
@@ -43,11 +47,9 @@ impl APIConnector<NoTenant> {
         };
 
         res.load_services().await;
-        
+
         res
     }
-
-
 
     pub async fn create_tenant(&self, name: &str) -> sqlx::Result<Tenant> {
         if !self.db_connector.has_tenant(name).await? {
@@ -60,9 +62,13 @@ impl APIConnector<NoTenant> {
         self.db_connector.get_tenants().await
     }
 
-    pub async fn init(config: &Config) -> Result<APIConnector<NoTenant>, Box<dyn Error>> {
+    pub async fn init(
+        config: &Config,
+        task_creator: impl FnOnce(BoxFuture<()>),
+    ) -> Result<APIConnector<NoTenant>, Box<dyn Error>> {
         let fcp_connector =
             FCPConnector::new(TcpStream::connect(config.fcp_endpoint).await?, "Mycelink").await?;
+        task_creator(Box::pin(fcp_connector.listen()));
         let db_connector =
             DBConnector::new(config.database_path.as_os_str().to_str().unwrap()).await?;
 
@@ -111,7 +117,7 @@ impl APIConnector<Tenant> {
         let futures = join_all(self.messenger_services.iter().map(|e| e.poll())).await;
         futures.into_iter().fold(Ok(()), |acc, e| acc.and(e))
     }
-    
+
     pub async fn get_enabled_protocols(
         &self,
     ) -> impl Stream<Item = sqlx::Result<ProtocolConfig>> + '_ {

@@ -1,20 +1,13 @@
 use crate::api::APIConnector;
-use crate::crypto::tagged_types::keys::KeyOrderExt;
-use crate::crypto::tagged_types::tagged_key_exchange::TaggedInitiateKeyExchange;
 use crate::db::actions::chat_actions::ChatId;
 use crate::db::actions::contact_actions::ContactId;
 use crate::db::actions::tenant_actions::Tenant;
 use crate::fcp_tools::fcp_get::{fcp_get_inline, FcpGetError};
-use crate::fcp_tools::fcp_put::{fcp_put_inline, FcpPutError};
 use crate::model::connection_details::{PublicConnectionDetails, PublicMycelinkConnectionDetails};
 use crate::model::contact::ContactDisplay;
 use crate::model::protocol_config::Protocol;
-use crate::mycelink::mycelink_account::CreateAccountError;
 use crate::mycelink::mycelink_chat::{MycelinkChat, OpenChatError};
 use crate::mycelink::mycelink_contact::MycelinkContact;
-use crate::mycelink::protocol::mycelink_channel_request::{
-    MycelinkChannelRequest, OpenChannelError,
-};
 use mycelink_lib_fcp::decode_error::DecodeError;
 use mycelink_lib_fcp::model::priority_class::PriorityClass;
 use std::ops::Deref;
@@ -77,7 +70,8 @@ impl APIConnector<Tenant> {
 
             let contact = MycelinkContact::new(display.display_name, connection_details);
 
-            let chat = MycelinkChat::new_direct_chat(contact, self.fcp_connector.deref()).await?;
+            let chat =
+                MycelinkChat::new_direct_chat(self.contact, self.fcp_connector.deref()).await?;
             let display_name: Box<str> = chat.display_name().into();
             Ok(self
                 .db_connector

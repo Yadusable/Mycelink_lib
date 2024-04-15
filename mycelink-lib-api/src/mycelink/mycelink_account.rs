@@ -1,14 +1,23 @@
 use crate::crypto::key_exchange_providers::x25519::X25519;
 use crate::crypto::key_exchange_providers::AsymmetricEncryptionProvider;
+use crate::crypto::key_material::KeyMaterial;
 use crate::crypto::signature_providers::ed25519::Ed25519;
 use crate::crypto::signature_providers::SignatureProvider;
+use crate::crypto::signed_box::SignedBox;
+use crate::crypto::tagged_types::keys::KeyOrderExt;
+use crate::crypto::tagged_types::tagged_key_exchange::TaggedAnswerKeyExchange;
 use crate::crypto::tagged_types::tagged_keypair::{
     TaggedEncryptionKeyPair, TaggedSignatureKeyPair,
 };
+use crate::crypto::tagged_types::tagged_signed_box::TaggedSignedBox;
 use crate::db::actions::mycelink_account_actions::MycelinkAccountEntryError;
 use crate::fcp_tools::fcp_put::{fcp_put_inline, FcpPutError};
 use crate::fcp_tools::generate_ssk::{generate_ssk, GenerateSSKKeypairError};
 use crate::model::connection_details::PublicMycelinkConnectionDetails;
+use crate::mycelink::protocol::mycelink_channel::MycelinkChannel;
+use crate::mycelink::protocol::mycelink_channel_request::{
+    MycelinkChannelRequest, OpenChannelError,
+};
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
@@ -20,6 +29,7 @@ pub struct MycelinkAccount {
 
     channel_request_dropbox_insert_key: Box<str>, // ! Public and therefore spamable
     channel_request_dropbox_request_key: Box<str>, // ! Public as insert is public
+    channel_request_dropbox_known: u32,
 
     encryption_keys: Vec<TaggedEncryptionKeyPair>,
     signing_keys: Vec<TaggedSignatureKeyPair>,
@@ -39,6 +49,7 @@ impl MycelinkAccount {
             insert_ssk_key,
             channel_request_dropbox_insert_key,
             channel_request_dropbox_request_key,
+            channel_request_dropbox_known: 0,
             encryption_keys,
             signing_keys,
         }
@@ -71,6 +82,7 @@ impl MycelinkAccount {
                 dropbox_keypair.insert_uri.replace("SSK@", "USK@")
             )
             .into(),
+            channel_request_dropbox_known: 0,
             encryption_keys,
             signing_keys,
         };
@@ -115,6 +127,41 @@ impl MycelinkAccount {
     pub(crate) fn insert_ssk_key(&self) -> &str {
         &self.insert_ssk_key
     }
+
+    pub fn channel_request_dropbox_insert_key(&self) -> &Box<str> {
+        &self.channel_request_dropbox_insert_key
+    }
+    pub fn channel_request_dropbox_request_key(&self) -> &Box<str> {
+        &self.channel_request_dropbox_request_key
+    }
+    pub fn channel_request_dropbox_known(&self) -> u32 {
+        self.channel_request_dropbox_known
+    }
+
+    pub fn sign(&self, value: impl Serialize) -> TaggedSignedBox {
+        let key = self.signing_keys.iter().get_recommended_key().unwrap();
+        TaggedSignedBox::sign(value, key)
+    }
+
+    pub async fn accept_channel_request(
+        &self,
+        request: MycelinkChannelRequest,
+        fcp: &FCPConnector,
+    ) -> Result<MycelinkChannel, OpenChannelError> {
+        request.accept(self.encryption_keys.as_slice(), fcp).await
+    }
+
+    pub fn try_complete(
+        &self,
+        answer: TaggedAnswerKeyExchange,
+    ) -> Result<KeyMaterial, NoMatchingKeyError> {
+        for candidate in self.encryption_keys.iter() {
+            if let Ok(key) = answer.try_complete(candidate) {
+                return Ok(key);
+            }
+        }
+        Err(NoMatchingKeyError())
+    }
 }
 
 impl PartialEq for MycelinkAccount {
@@ -155,3 +202,6 @@ impl From<sqlx::Error> for CreateAccountError {
         Self::AccountEntry(MycelinkAccountEntryError::SqlxError { inner: value })
     }
 }
+
+#[derive(Debug)]
+pub struct NoMatchingKeyError();

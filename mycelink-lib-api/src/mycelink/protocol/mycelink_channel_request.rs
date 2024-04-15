@@ -1,14 +1,17 @@
 use crate::crypto::kdf_provider::KdfProviderTag;
-use crate::crypto::secret_box::SecretBoxError;
+use crate::crypto::secret_box::{SecretBox, SecretBoxError};
 use crate::crypto::signed_box::SignedBoxError;
-use crate::crypto::tagged_types::keys::PublicSigningKey;
+use crate::crypto::tagged_types::keys::{PublicEncryptionKey, PublicSigningKey};
 use crate::crypto::tagged_types::tagged_key_exchange::{
     TaggedAnswerKeyExchange, TaggedInitiateKeyExchange,
 };
-use crate::crypto::tagged_types::tagged_keypair::TaggedEncryptionKeyPair;
+use crate::crypto::tagged_types::tagged_keypair::{
+    TaggedEncryptionKeyPair, TaggedSignatureKeyPair,
+};
 use crate::crypto::tagged_types::tagged_secret_box::TaggedSecretBox;
 use crate::crypto::tagged_types::tagged_signed_box::TaggedSignedBox;
 use crate::fcp_tools::fcp_put::FcpPutError;
+use crate::mycelink::mycelink_account::{MycelinkAccount, NoMatchingKeyError};
 use crate::mycelink::protocol::mycelink_channel::{MycelinkChannel, ReceiveMessageError};
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
 use serde::{Deserialize, Serialize};
@@ -33,7 +36,7 @@ pub struct MycelinkChannelRequest {
 impl MycelinkChannelRequest {
     pub async fn accept(
         self,
-        keypair_candidates: &[&TaggedEncryptionKeyPair],
+        keypair_candidates: &[impl AsRef<TaggedEncryptionKeyPair>],
         fcp_connector: &FCPConnector,
     ) -> Result<MycelinkChannel, OpenChannelError> {
         if let Ok(key) = self.keys.try_complete_multiple(keypair_candidates) {
@@ -72,6 +75,10 @@ impl MycelinkChannelRequest {
             .await?,
         ))
     }
+
+    pub fn sign(self, account: &MycelinkAccount) -> SignedMycelinkChannelRequest {
+        SignedMycelinkChannelRequest(account.sign(self))
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -84,6 +91,18 @@ impl SignedMycelinkChannelRequest {
 
         Ok((request, public_key))
     }
+
+    pub fn encrypt(
+        self,
+        recipient_pub: &TaggedInitiateKeyExchange,
+    ) -> EncryptedSignedMycelinkChannelRequest {
+        let (answer, key) = recipient_pub.answer();
+        let encrypted = SecretBox::create(&self, &key.into()).into();
+        EncryptedSignedMycelinkChannelRequest {
+            data: encrypted,
+            encryption_keys: answer,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -95,9 +114,10 @@ pub struct EncryptedSignedMycelinkChannelRequest {
 impl EncryptedSignedMycelinkChannelRequest {
     pub fn try_open(
         self,
-        keypair_candidates: &[&TaggedEncryptionKeyPair],
+        account: &MycelinkAccount,
     ) -> Result<(MycelinkChannelRequest, PublicSigningKey), OpenChannelError> {
-        let signed_request = self.try_decrypt(keypair_candidates)?;
+        let key = account.try_complete(self.encryption_keys)?;
+        let signed_request: SignedMycelinkChannelRequest = self.data.try_decrypt(key)?;
 
         Ok(signed_request.verify()?)
     }
@@ -145,5 +165,11 @@ impl From<FcpPutError> for OpenChannelError {
 impl From<ReceiveMessageError> for OpenChannelError {
     fn from(value: ReceiveMessageError) -> Self {
         Self::ReceiveMessageError(value)
+    }
+}
+
+impl From<NoMatchingKeyError> for OpenChannelError {
+    fn from(value: NoMatchingKeyError) -> Self {
+        Self::NoMatchingKey
     }
 }

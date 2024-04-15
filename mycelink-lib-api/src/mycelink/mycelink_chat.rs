@@ -1,3 +1,4 @@
+use crate::crypto::signed_box::SignedBox;
 use crate::crypto::tagged_types::keys::KeyOrderExt;
 use crate::db::actions::chat_actions::ChatId;
 use crate::db::actions::tenant_actions::Tenant;
@@ -6,6 +7,7 @@ use crate::fcp_tools::fcp_put::{fcp_put_inline, FcpPutError};
 use crate::model::message::ProtocolMessageMeta;
 use crate::model::message_types::MessageType;
 use crate::model::messenger_service::PollError;
+use crate::mycelink::mycelink_account::MycelinkAccount;
 use crate::mycelink::mycelink_contact::MycelinkContact;
 use crate::mycelink::protocol::mycelink_channel::MycelinkChannel;
 use crate::mycelink::protocol::mycelink_channel_message::MycelinkChannelMessage;
@@ -30,6 +32,7 @@ pub enum MycelinkChatType {
 
 impl MycelinkChat {
     pub async fn new_direct_chat(
+        account: &MycelinkAccount,
         contact: MycelinkContact,
         fcp: &FCPConnector,
     ) -> Result<Self, OpenChatError> {
@@ -43,8 +46,11 @@ impl MycelinkChat {
         let (request, channel) =
             MycelinkChannelRequest::create(recipient_pub_key.clone(), fcp).await?;
 
+        let signed_request = request.sign(account);
+        let encrypted_request = signed_request.encrypt(recipient_pub_key);
+
         let mut request_data = Vec::new();
-        ciborium::into_writer(&request, &mut request_data).unwrap();
+        ciborium::into_writer(&encrypted_request, &mut request_data).unwrap();
         fcp_put_inline(
             request_data.into(),
             contact

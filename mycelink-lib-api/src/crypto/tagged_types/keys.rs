@@ -2,6 +2,7 @@ use crate::crypto::key_exchange_providers::x25519::X25519;
 use crate::crypto::key_exchange_providers::AsymmetricEncryptionProvider;
 use crate::crypto::signature_providers::ed25519::Ed25519;
 use crate::crypto::signature_providers::SignatureProvider;
+use crate::crypto::tagged_types::tagged_keypair::TaggedSignatureKeyPair;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
@@ -54,6 +55,14 @@ impl KeyOrder for &PublicSigningKey {
     fn order(&self) -> i8 {
         match self {
             PublicSigningKey::Ed25519(_) => 1,
+        }
+    }
+}
+
+impl KeyOrder for &TaggedSignatureKeyPair {
+    fn order(&self) -> i8 {
+        match self {
+            TaggedSignatureKeyPair::Ed25519(_) => 1,
         }
     }
 }

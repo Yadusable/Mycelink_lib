@@ -2,6 +2,7 @@ use crate::crypto::hash_provider::sha512::Sha512;
 use crate::crypto::signature_providers::ed25519::Ed25519;
 use crate::crypto::signed_box::{SignedBox, SignedBoxError};
 use crate::crypto::tagged_types::keys::PublicSigningKey;
+use crate::crypto::tagged_types::tagged_keypair::TaggedSignatureKeyPair;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -19,6 +20,14 @@ impl TaggedSignedBox {
     pub fn public_key(&self) -> PublicSigningKey {
         match self {
             TaggedSignedBox::Ed25519(inner) => PublicSigningKey::Ed25519(*inner.public_key()),
+        }
+    }
+
+    pub fn sign(item: impl Serialize, key: &TaggedSignatureKeyPair) -> Self {
+        match key {
+            TaggedSignatureKeyPair::Ed25519(keys) => {
+                TaggedSignedBox::Ed25519(SignedBox::sign(item, keys))
+            }
         }
     }
 }

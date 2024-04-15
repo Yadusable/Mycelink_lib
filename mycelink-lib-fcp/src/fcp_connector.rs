@@ -4,17 +4,17 @@ use crate::model::message::Message;
 use crate::peekable_reader::PeekableReader;
 use log::error;
 use std::convert::Infallible;
-use std::sync::Mutex;
 use tokio::io::AsyncWriteExt;
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc::channel;
+use tokio::sync::Mutex;
 
 pub struct FCPConnector {
     tx: Mutex<OwnedWriteHalf>,
-    rx: tokio::sync::Mutex<PeekableReader<OwnedReadHalf>>,
+    rx: Mutex<PeekableReader<OwnedReadHalf>>,
 
-    listeners: tokio::sync::Mutex<Vec<Listener>>,
+    listeners: Mutex<Vec<Listener>>,
 }
 
 impl FCPConnector {
@@ -25,8 +25,8 @@ impl FCPConnector {
 
         let s = Self {
             tx: Mutex::new(tx),
-            rx: tokio::sync::Mutex::new(rx),
-            listeners: tokio::sync::Mutex::new(Vec::new()),
+            rx: Mutex::new(rx),
+            listeners: Mutex::new(Vec::new()),
         };
 
         log::info!("Connecting to Freenet over FCP");
@@ -101,7 +101,7 @@ impl FCPConnector {
         let message = message.into();
         log::debug!("Send Message {message:?}");
         let bytes = message.encode();
-        let mut tx = self.tx.lock().unwrap();
+        let mut tx = self.tx.lock().await;
         tx.write_all(bytes.as_slice()).await
     }
 }

@@ -30,7 +30,7 @@ impl PollableService {
         }
     }
 
-    pub fn service(&self) -> &dyn MessengerService {
+    pub fn service(&self) -> &(dyn MessengerService + Send + Sync) {
         match self {
             PollableService::MycelinkService(service) => service,
         }

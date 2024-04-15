@@ -4,10 +4,8 @@ pub mod mycelink_create_account;
 use crate::db::actions::contact_actions::ContactId;
 use crate::db::actions::tenant_actions::Tenant;
 use crate::db::db_connector::{DBConnector, NoTenant, TenantState};
-use crate::fcp_tools::fcp_get::{fcp_get_inline, FcpGetError};
 use crate::model::chat::Chat;
 use crate::model::config::Config;
-use crate::model::connection_details::PublicMycelinkConnectionDetails;
 use crate::model::contact::ContactDisplay;
 use crate::model::messenger_service::{PollError, PollableService};
 use crate::model::protocol_config::{Protocol, ProtocolConfig};
@@ -15,11 +13,8 @@ use crate::mycelink::mycelink_account::MycelinkAccount;
 use crate::mycelink::mycelink_service::MycelinkService;
 use futures::future::join_all;
 use futures::{Stream, StreamExt};
-use mycelink_lib_fcp::decode_error::DecodeError;
 use mycelink_lib_fcp::fcp_connector::FCPConnector;
-use mycelink_lib_fcp::model::priority_class::PriorityClass;
 use std::error::Error;
-use std::ops::Deref;
 use std::sync::Arc;
 use tokio::net::TcpStream;
 
@@ -141,5 +136,12 @@ impl APIConnector<Tenant> {
 
     pub async fn list_contacts(&self) -> impl Stream<Item = sqlx::Result<ContactDisplay>> + '_ {
         self.db_connector.list_contacts().await
+    }
+
+    pub async fn get_mycelink_account_request_key(&self) -> sqlx::Result<Option<Box<str>>> {
+        self.db_connector
+            .get_mycelink_account()
+            .await
+            .map(|e| e.map(|acc| acc.request_ssk_key().into()))
     }
 }

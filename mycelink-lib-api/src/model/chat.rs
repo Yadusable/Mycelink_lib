@@ -14,8 +14,25 @@ pub struct Chat<'a, 'b> {
     pub(crate) id: ChatId,
     pub(crate) display_name: Box<str>,
     pub(crate) alt_name: Option<Box<str>>,
-    pub(crate) message_service: &'a dyn MessengerService,
+    pub(crate) message_service: &'a (dyn MessengerService + Send + Sync),
     pub(crate) db_connector: &'b DBConnector<Tenant>,
+}
+
+pub struct ChatDisplay {
+    pub id: ChatId,
+    pub display_name: Box<str>,
+    pub alt_name: Option<Box<str>>,
+    //todo picture
+}
+
+impl From<Chat<'_, '_>> for ChatDisplay {
+    fn from(value: Chat) -> Self {
+        ChatDisplay {
+            id: value.id,
+            display_name: value.display_name,
+            alt_name: value.alt_name,
+        }
+    }
 }
 
 pub struct MessageStreams<

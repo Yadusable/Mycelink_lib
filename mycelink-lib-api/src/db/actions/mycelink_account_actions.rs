@@ -30,13 +30,10 @@ impl DBConnector<Tenant> {
         Ok(())
     }
 
-    pub async fn get_mycelink_account(
-        &self,
-        tx: &mut Transaction<'_, DatabaseBackend>,
-    ) -> Result<Option<MycelinkAccount>, MycelinkAccountEntryError> {
+    pub async fn get_mycelink_account(&self) -> sqlx::Result<Option<MycelinkAccount>> {
         let query = sqlx::query("SELECT (config) FROM protocol_config_per_tenant WHERE protocol = 'Mycelink' AND tenant = ?")
             .bind(self.tenant());
-        let res = query.fetch_optional(&mut **tx).await?;
+        let res = query.fetch_optional(self.pool().await).await?;
 
         if let Some(row) = res {
             let account: Json<MycelinkAccount> = row.try_get("config")?;

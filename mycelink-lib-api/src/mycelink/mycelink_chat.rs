@@ -82,7 +82,7 @@ impl MycelinkChat {
                         MycelinkChannelMessage::GroupChatRekey { .. } => {
                             todo!()
                         }
-                        MycelinkChannelMessage::FinalMessage { .. } => {
+                        MycelinkChannelMessage::ChannelRekey { .. } => {
                             panic!("unreachable")
                         }
                         MycelinkChannelMessage::DirectMessage(message) => {

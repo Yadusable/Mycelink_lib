@@ -19,7 +19,7 @@ use crate::mycelink::protocol::compressed_box::{
 use crate::mycelink::protocol::mycelink_channel::ReceiveMessageError::{
     FailedRekey, NotInitialized,
 };
-use crate::mycelink::protocol::mycelink_channel_message::MycelinkChannelMessage::FinalMessage;
+use crate::mycelink::protocol::mycelink_channel_message::MycelinkChannelMessage::ChannelRekey;
 use crate::mycelink::protocol::mycelink_channel_message::{
     InitialChannelMessage, MycelinkChannelMessage,
 };
@@ -44,7 +44,7 @@ use std::time::UNIX_EPOCH;
 /// 1: Both parties receive some common secret over a prior key exchange
 /// 2: Both parties send a [InitialChannelMessage] with newly generated ephemeral public keys in all supported schemas.
 /// 3: Both parties may send as many non-final [MycelinkChannelMessage] as they like.
-/// 4: Any party can at any point rekey its sending ratchet by sending a [MycelinkChannelMessage::FinalMessage] provided it has unused pending public components from the receiver
+/// 4: Any party can at any point rekey its sending ratchet by sending a [MycelinkChannelMessage::ChannelRekey] provided it has unused pending public components from the receiver
 ///
 /// Forward secrecy is provided for following channels, as they are secrets depend on a fully ephemeral key exchange.
 /// Deniability is provided as no messages are signed, meaning that any party able to read or verify any message is also able of forging a message.
@@ -192,7 +192,7 @@ impl MycelinkChannel {
                 let (next_public_components, next_private_components) = Self::prepare_rekey();
                 let new_kdf = KdfProviderTag::default();
 
-                let final_message = FinalMessage {
+                let final_message = ChannelRekey {
                     new_key: answer,
                     next_public_components: next_public_components.into(),
                     new_kdf,
@@ -272,7 +272,7 @@ impl MycelinkChannel {
 
         match self.try_receive(fcp_connector).await? {
             Some(message) => {
-                if let FinalMessage {
+                if let ChannelRekey {
                     new_key,
                     new_kdf,
                     next_public_components,

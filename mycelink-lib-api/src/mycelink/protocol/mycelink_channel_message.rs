@@ -16,7 +16,8 @@ pub enum MycelinkChannelMessage<'a> {
     GroupChatRekey {
         //TODO
     },
-    FinalMessage {
+    GroupChatInvite {},
+    ChannelRekey {
         new_key: TaggedAnswerKeyExchange,
         new_kdf: KdfProviderTag,
         next_public_components: Box<[TaggedInitiateKeyExchange]>,
@@ -30,8 +31,9 @@ impl CompressionHinting for MycelinkChannelMessage<'_> {
     fn compression_hint(&self) -> CompressionHint {
         match self {
             MycelinkChannelMessage::GroupChatRekey { .. } => CompressionHint::Fast,
-            MycelinkChannelMessage::FinalMessage { .. } => CompressionHint::Fast,
+            MycelinkChannelMessage::ChannelRekey { .. } => CompressionHint::Fast,
             MycelinkChannelMessage::DirectMessage(inner) => inner.compression_hint(),
+            MycelinkChannelMessage::GroupChatInvite { .. } => CompressionHint::Fast,
         }
     }
 }

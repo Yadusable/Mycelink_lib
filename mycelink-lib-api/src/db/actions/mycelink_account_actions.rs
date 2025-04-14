@@ -13,7 +13,7 @@ impl DBConnector<Tenant> {
         tx: &mut Transaction<'_, DatabaseBackend>,
         account: &MycelinkAccount,
     ) -> Result<(), MycelinkAccountEntryError> {
-        if self.get_mycelink_account(tx).await?.is_some() {
+        if self.get_mycelink_account().await?.is_some() {
             return Err(MycelinkAccountEntryError::AccountAlreadyExists);
         }
 
